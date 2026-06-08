@@ -123,11 +123,81 @@ app.post('/api/leads', async (req, res) => {
 app.patch('/api/leads/:id', async (req, res) => {
   try {
     const db = getPrisma();
-    const data = { ...req.body };
+    const { recontactar, ...rest } = req.body;
+    const data = { ...rest };
     if (Array.isArray(data.instituicoes)) data.instituicoes = JSON.stringify(data.instituicoes);
     if (Array.isArray(data.tags))         data.tags         = JSON.stringify(data.tags);
     const lead = await db.lead.update({ where: { id: req.params.id }, data });
     res.json(lead);
+
+    // Recontato pós-atualização (assíncrono, não bloqueia resposta)
+    if (recontactar && recontactar !== 'nao' && !lead.cessarContato) {
+      const processar = async () => {
+        try {
+          const leadFull = await db.lead.findUnique({
+            where: { id: lead.id },
+            include: { mensagens: { orderBy: { timestamp: 'asc' }, take: 20 } }
+          });
+          const { sendWhatsApp } = require('./zapi');
+          const Anthropic = require('@anthropic-ai/sdk');
+          const ac = new Anthropic();
+          const primeiroNome = leadFull.nome.split(' ')[0];
+          const userMsgs = leadFull.mensagens.filter(m => m.role === 'user').length;
+          const ultimaMsg = leadFull.mensagens.slice(-1)[0];
+
+          let instrucao;
+          if (recontactar === 'nova_abordagem') {
+            instrucao = `Gere uma mensagem de WhatsApp para ${primeiroNome} com um ÂNGULO TOTALMENTE NOVO.
+Perfil: ${leadFull.profissao || 'profissional'}, ${leadFull.cidade || 'Brasil'}.
+Patrimônio: ${leadFull.patrimonio || 'não informado'}.
+${userMsgs > 0 ? `Já houve ${userMsgs} mensagem(ns) anterior(es) — use abordagem completamente diferente. Não repita o mesmo ângulo.` : 'Primeira abordagem — mensagem de abertura calorosa.'}
+Gancho: use um fato de mercado recente ou uma perspectiva que o cliente ainda não ouviu.
+Objetivo: despertar curiosidade e propor os 15 minutos com Hariton.
+Tom: caloroso, direto, máximo 3 parágrafos curtos.`;
+          } else {
+            // continuar
+            instrucao = `Gere uma mensagem de WhatsApp retomando a conversa com ${primeiroNome} de onde parou.
+Perfil: ${leadFull.profissao || 'profissional'}, ${leadFull.cidade || 'Brasil'}.
+${userMsgs > 0
+  ? `Última mensagem enviada: "${ultimaMsg?.content?.slice(0, 150) || '...'}"
+Retome naturalmente, como se o tempo passado fosse normal — sem mencionar "sumiu" ou "não respondeu".`
+  : 'Ainda não houve conversa — inicie como primeiro contato.'}
+Objetivo: continuar o fluxo em direção ao agendamento.
+Tom: caloroso, natural, máximo 3 parágrafos curtos.`;
+          }
+
+          const r = await ac.messages.create({
+            model: 'claude-sonnet-4-6',
+            max_tokens: 380,
+            system: `Você é Sofia Mendes, secretária Private Banking sênior da Altum Wealth. Cria mensagens de WhatsApp altamente personalizadas e humanizadas. Nunca menciona taxas ou produtos. Português brasileiro refinado.`,
+            messages: [{ role: 'user', content: instrucao }]
+          });
+          const msg = r.content[0].text.trim();
+          await sendWhatsApp(leadFull.whatsapp, msg);
+          await db.mensagem.create({ data: { leadId: leadFull.id, role: 'assistant', content: msg } });
+          await db.lead.update({ where: { id: leadFull.id }, data: { ultimaInteracao: new Date() } });
+          console.log(`[Recontato·${recontactar}] ✓ ${leadFull.nome}`);
+        } catch (err) {
+          console.error('[Recontato] Erro:', err.message);
+        }
+      };
+      if (req.waitUntil) req.waitUntil(processar());
+      else setImmediate(processar);
+    }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── Apagar lead ──────────────────────────────────────────────────────────────
+
+app.delete('/api/leads/:id', async (req, res) => {
+  const db = getPrisma();
+  try {
+    await db.mensagem.deleteMany({ where: { leadId: req.params.id } });
+    await db.reuniao.deleteMany({ where: { leadId: req.params.id } });
+    await db.lead.delete({ where: { id: req.params.id } });
+    res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -270,15 +340,16 @@ Gere SOMENTE o texto da mensagem, sem explicação.`;
       textoFinal = res2.content[0].text.trim();
     }
 
-    // Envia pelo canal
-    if (canal === 'whatsapp') {
+    // Envia pelo canal — só envia via Z-API quando NÃO está em modo de geração
+    // (gerarComSofia=true = apenas gera o texto para revisão; envio ocorre no segundo request)
+    if (canal === 'whatsapp' && !gerarComSofia) {
       const { sendWhatsApp } = require('./zapi');
       await sendWhatsApp(lead.whatsapp, textoFinal);
       // Salva no histórico como mensagem da Sofia
       await db.mensagem.create({ data: { leadId: lead.id, role: 'assistant', content: textoFinal } });
       await db.lead.update({ where: { id: lead.id }, data: { ultimaInteracao: new Date() } });
     }
-    // LinkedIn e Email: apenas retorna o texto (envio manual pelo usuário)
+    // LinkedIn, Email e modo geração: apenas retorna o texto (envio manual pelo usuário)
 
     res.json({ ok: true, mensagem: textoFinal, canal });
   } catch (err) {
