@@ -1,84 +1,116 @@
 /**
- * Plugin: Re-engajamento
- * Leads que ficaram em silêncio por 5+ dias recebem mensagem de reativação
- * com um novo ângulo — insight de mercado ou convite direto.
- * Máximo 1 tentativa de reengajamento por lead.
+ * Plugin: Re-engajamento 4 meses
+ * Leads marcados como "sem_interesse" recebem novo contato após 4 meses,
+ * sempre com referência ao contato anterior e novo ângulo de abordagem.
+ * Cessa contato definitivamente quando o lead pede opt-out.
  */
 
-const Anthropic = require('@anthropic-ai/sdk');
 const { sendWhatsApp } = require('../zapi');
+const { gerarMensagemReengajamento4Meses } = require('../sofia');
 
-const client = new Anthropic();
+const QUATRO_MESES_MS = 4 * 30 * 24 * 60 * 60 * 1000; // ~120 dias
 
-const REENG_SYSTEM = `Você é Sofia Mendes, secretária particular sênior do advisor Hariton Gomes (Altum Wealth).
-Você está retomando contato com um cliente que não respondeu há alguns dias.
-NÃO mencione que faz tempo que não falam. Aborde como se fosse um novo insight importante que você quis compartilhar.
-Use um ângulo completamente diferente da primeira abordagem — notícia de mercado, mudança regulatória ou oportunidade sazonal.
-Tom: caloroso, genuíno, sem pressão. Máximo 2 parágrafos.
-Responda sempre em português brasileiro.`;
+async function executarReengajamento4Meses(prisma) {
+  const agora = new Date();
+  const limite = new Date(agora.getTime() - QUATRO_MESES_MS);
 
-const INSIGHTS_POR_NICHO = {
-  medico_cirurgiao: 'mudanças recentes na regulamentação de proteção patrimonial para médicos e o aumento de processos no setor de saúde',
-  advogado_tributarista: 'as novas regras de tributação de offshores (Lei 14.754/2023) e como estruturas bem montadas ainda garantem eficiência fiscal',
-  ceo_empresario: 'a desvalorização do real em 2024 e como empresários com parte do patrimônio em dólar protegeram o poder de compra',
-  dentista_especialista: 'o crescimento de dentistas especialistas entre os clientes de private banking e as estratégias mais usadas por eles',
-  engenheiro_executivo: 'os riscos de concentração em stock options e como executivos sênior estão diversificando além da empresa empregadora'
-};
-
-async function gerarMensagemReengajamento(lead) {
-  const insight = INSIGHTS_POR_NICHO[lead.nicho] || 'tendências do mercado de investimentos internacionais para profissionais de alta renda';
-
-  const response = await client.messages.create({
-    model: 'claude-sonnet-4-6',
-    max_tokens: 280,
-    system: REENG_SYSTEM,
-    messages: [{
-      role: 'user',
-      content: `Gere uma mensagem de reativação para ${lead.nome}, ${lead.profissao} em ${lead.cidade}.
-Patrimônio estimado: ${lead.patrimonio}.
-Use como gancho: ${insight}.
-Finalize com um convite suave para uma conversa de 15 min com o Hariton.`
-    }]
-  });
-
-  return response.content[0].text;
-}
-
-async function executarReengajamento(prisma) {
-  const ha5dias = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000);
-  const ha10dias = new Date(Date.now() - 10 * 24 * 60 * 60 * 1000);
-
+  // Leads sem interesse, sem cessarContato, cuja ultima interação foi há 4+ meses
+  // OU cuja reengajarEm já chegou
   const leads = await prisma.lead.findMany({
-    include: { mensagens: { orderBy: { timestamp: 'desc' }, take: 1 } },
+    include: { mensagens: { orderBy: { timestamp: 'desc' }, take: 5 } },
     where: {
-      estagio: { in: ['prospeccao', 'qualificacao'] },
-      reengajado: { not: true }
+      semInteresse: true,
+      cessarContato: false,
+      OR: [
+        { reengajarEm: { lte: agora } },
+        {
+          reengajarEm: null,
+          ultimaInteracao: { lte: limite }
+        }
+      ]
     }
   });
 
   let enviados = 0;
   for (const lead of leads) {
-    const ultimaMsg = lead.mensagens[0];
-    if (!ultimaMsg) continue;
-
-    const ts = new Date(ultimaMsg.timestamp);
-    const silencioLongo = ts < ha5dias && ts > ha10dias;
-    if (!silencioLongo) continue;
-
     try {
-      const mensagem = await gerarMensagemReengajamento(lead);
-      await prisma.mensagem.create({ data: { leadId: lead.id, role: 'assistant', content: mensagem } });
+      const mensagem = await gerarMensagemReengajamento4Meses(lead);
+
+      await prisma.mensagem.create({
+        data: { leadId: lead.id, role: 'assistant', content: mensagem }
+      });
       await sendWhatsApp(lead.whatsapp, mensagem);
-      await prisma.lead.update({ where: { id: lead.id }, data: { reengajado: true } });
+
+      // Próximo reengajamento daqui a 4 meses
+      const proximoReeng = new Date(agora.getTime() + QUATRO_MESES_MS);
+      await prisma.lead.update({
+        where: { id: lead.id },
+        data: {
+          ultimaInteracao: agora,
+          reengajarEm: proximoReeng,
+          reengajado: true,
+          estagio: 'prospeccao' // volta para prospecção ativa
+        }
+      });
+
       enviados++;
-      console.log(`[Re-engajamento] Mensagem enviada para ${lead.nome}`);
-      await new Promise(r => setTimeout(r, 15000)); // 15s entre envios
+      console.log(`[Reeng4m] Mensagem enviada → ${lead.nome} | próximo em ${proximoReeng.toLocaleDateString('pt-BR')}`);
+
+      // Espaçamento entre envios para não parecer spam
+      await new Promise(r => setTimeout(r, 20000));
     } catch (err) {
-      console.error(`[Re-engajamento] Erro para ${lead.nome}:`, err.message);
+      console.error(`[Reeng4m] Erro para ${lead.nome}:`, err.message);
     }
   }
 
-  if (enviados > 0) console.log(`[Re-engajamento] ${enviados} mensagens enviadas`);
+  console.log(`[Reeng4m] ${enviados} reengajamentos enviados`);
+  return { enviados };
 }
 
-module.exports = { executarReengajamento };
+// Re-engajamento de 5 dias para leads em prospecção sem resposta (fluxo original)
+async function executarReengajamento5Dias(prisma) {
+  const ha5dias  = new Date(Date.now() - 5 * 86400000);
+  const ha10dias = new Date(Date.now() - 10 * 86400000);
+
+  const leads = await prisma.lead.findMany({
+    include: { mensagens: { orderBy: { timestamp: 'desc' }, take: 1 } },
+    where: {
+      estagio:       { in: ['prospeccao', 'qualificacao'] },
+      semInteresse:  false,
+      cessarContato: false,
+      reengajado:    false
+    }
+  });
+
+  const { gerarMensagemAbertura } = require('./templates');
+  const { sendWhatsApp: send } = require('../zapi');
+
+  let enviados = 0;
+  for (const lead of leads) {
+    const ultimaMsg = lead.mensagens[0];
+    if (!ultimaMsg) continue;
+    const ts = new Date(ultimaMsg.timestamp);
+    if (!(ts < ha5dias && ts > ha10dias)) continue;
+
+    try {
+      // Mensagem de reativação com novo ângulo
+      const { gerarMensagemReengajamento4Meses: gerarMsg } = require('../sofia');
+      const mensagem = await gerarMsg(lead);
+      await prisma.mensagem.create({ data: { leadId: lead.id, role: 'assistant', content: mensagem } });
+      await send(lead.whatsapp, mensagem);
+      await prisma.lead.update({
+        where: { id: lead.id },
+        data: { reengajado: true, ultimaInteracao: new Date() }
+      });
+      enviados++;
+      await new Promise(r => setTimeout(r, 15000));
+    } catch (err) {
+      console.error(`[Reeng5d] Erro para ${lead.nome}:`, err.message);
+    }
+  }
+
+  if (enviados > 0) console.log(`[Reeng5d] ${enviados} mensagens enviadas`);
+  return { enviados };
+}
+
+module.exports = { executarReengajamento4Meses, executarReengajamento5Dias };

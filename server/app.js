@@ -16,6 +16,7 @@ const { sendWhatsApp, extractPhoneFromWebhook, extractTextFromWebhook, isIncomin
 const { podendoAgendar } = require('./scheduler');
 const { notificarReuniaoConfirmada } = require('./plugins/notificacao');
 const { calcularScore } = require('./plugins/scoring');
+const { executarReengajamento4Meses, executarReengajamento5Dias } = require('./plugins/reengagement');
 
 const app = express();
 app.use(cors({ origin: process.env.FRONTEND_URL || '*' }));
@@ -76,7 +77,7 @@ app.post('/api/leads', async (req, res) => {
         const abertura = await sofia.gerarAbertura(lead);
         await db.mensagem.create({ data: { leadId: lead.id, role: 'assistant', content: abertura } });
         await sendWhatsApp(whatsapp, abertura);
-        await db.lead.update({ where: { id: lead.id }, data: { score: 5 } });
+        await db.lead.update({ where: { id: lead.id }, data: { score: 5, ultimaInteracao: new Date() } });
         console.log(`[Sofia] Abertura enviada → ${lead.nome}`);
       } catch (err) {
         console.error('[Sofia] Erro ao enviar abertura:', err.message);
@@ -134,14 +135,31 @@ app.post('/api/webhook/whatsapp', async (req, res) => {
       const lead = leads.find(l => l.whatsapp.replace(/\D/g, '').slice(-8) === phoneSuffix);
       if (!lead) return;
 
+      // Cessar contato: não responde, apenas registra a mensagem
+      if (lead.cessarContato) {
+        console.log(`[Webhook] ${lead.nome}: contato cessado — mensagem ignorada`);
+        await db.mensagem.create({ data: { leadId: lead.id, role: 'user', content: userMsg } });
+        return;
+      }
+
       console.log(`[Webhook] ${lead.nome}: "${userMsg.slice(0, 60)}"`);
 
       await db.mensagem.create({ data: { leadId: lead.id, role: 'user', content: userMsg } });
 
-      const { resposta, novoEstagio, agendou } = await sofia.responder(lead, userMsg);
+      const { resposta, novoEstagio, agendou, cessarContato } = await sofia.responder(lead, userMsg);
       await db.mensagem.create({ data: { leadId: lead.id, role: 'assistant', content: resposta } });
 
-      const updateData = { estagioConv: novoEstagio };
+      const agora = new Date();
+      const updateData = { estagioConv: novoEstagio, ultimaInteracao: agora };
+
+      if (cessarContato) {
+        updateData.cessarContato = true;
+        updateData.estagio = 'cessado';
+        await db.lead.update({ where: { id: lead.id }, data: updateData });
+        await sendWhatsApp(lead.whatsapp, resposta);
+        console.log(`[Sofia] STOP → ${lead.nome} — contato cessado definitivamente`);
+        return;
+      }
 
       if (agendou) {
         const ag = await podendoAgendar(new Date());
@@ -150,6 +168,7 @@ app.post('/api/webhook/whatsapp', async (req, res) => {
             data: { leadId: lead.id, data: ag.dataReuniao, status: 'agendada', canal: 'whatsapp' }
           });
           updateData.estagio = 'reuniao';
+          updateData.semInteresse = false;
           await notificarReuniaoConfirmada({ ...lead, ...updateData }, reuniao);
           console.log(`[Agenda] Reunião → ${lead.nome} em ${ag.formatada}`);
         }
@@ -188,6 +207,41 @@ app.get('/api/meetings/today', async (req, res) => {
     orderBy: { data: 'asc' }
   });
   res.json({ count: reunioes.length, max: parseInt(process.env.MAX_REUNIOES_DIA || '2'), reunioes });
+});
+
+// ─── Sem Interesse / Reengajamento ───────────────────────────────────────────
+
+// Marcar lead como sem interesse (move para coluna semInteresse no CRM)
+app.post('/api/leads/:id/sem-interesse', async (req, res) => {
+  try {
+    const db = getPrisma();
+    const agora = new Date();
+    const reengajarEm = new Date(agora.getTime() + 4 * 30 * 24 * 60 * 60 * 1000); // +4 meses
+    const lead = await db.lead.update({
+      where: { id: req.params.id },
+      data: { semInteresse: true, estagio: 'sem_interesse', ultimaInteracao: agora, reengajarEm }
+    });
+    console.log(`[CRM] Lead marcado sem interesse: ${lead.nome} | reengajar em ${reengajarEm.toLocaleDateString('pt-BR')}`);
+    res.json({ success: true, lead });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Cron de reengajamento — chamado pelo GitHub Actions
+app.post('/api/cron/reengajamento', async (req, res) => {
+  const secret = req.headers['x-cron-secret'] || req.body?.secret;
+  if (secret !== process.env.CRON_SECRET) return res.status(401).json({ error: 'unauthorized' });
+
+  const db = getPrisma();
+  try {
+    const r4m = await executarReengajamento4Meses(db);
+    const r5d = await executarReengajamento5Dias(db);
+    res.json({ success: true, reengajamento4meses: r4m.enviados, reengajamento5dias: r5d.enviados });
+  } catch (err) {
+    console.error('[Cron Reengajamento]', err.message);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ─── Analytics ────────────────────────────────────────────────────────────────

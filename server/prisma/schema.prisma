@@ -28,10 +28,14 @@ model Lead {
   linkedinStatus String    @default("nao_contactado")
   origem        String     @default("WhatsApp")
   score         Int        @default(0)
-  reengajado    Boolean    @default(false)
-  templateId    String?
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
+  reengajado       Boolean    @default(false)
+  semInteresse     Boolean    @default(false)
+  cessarContato    Boolean    @default(false)
+  ultimaInteracao  DateTime?
+  reengajarEm      DateTime?
+  templateId       String?
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
   mensagens     Mensagem[]
   reunioes      Reuniao[]
 }
