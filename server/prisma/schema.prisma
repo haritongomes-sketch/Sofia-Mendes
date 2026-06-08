@@ -15,6 +15,7 @@ model Lead {
   whatsapp      String     @unique
   nicho         String
   regiao        String
+  email         String     @default("")
   patrimonio    String     @default("")
   patrimonioNum Float      @default(0)
   profissao     String     @default("")

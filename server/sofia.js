@@ -258,4 +258,104 @@ Finalize com um convite suave para uma conversa diagnóstica de 15 min com o Har
   return res.content[0].text;
 }
 
-module.exports = { gerarAbertura, responder, gerarMensagemReengajamento4Meses, detectarCessarContato, temInformacoesCompletas };
+// ─── Extração automática de dados do lead ────────────────────────────────────
+
+const EXTRACAO_SYSTEM = `Você é um extrator de dados estruturados para um CRM de private banking.
+Analise a mensagem do cliente e extraia APENAS informações explicitamente mencionadas.
+Retorne um JSON puro (sem markdown, sem explicação) com os campos encontrados.
+Se um campo não foi mencionado, omita-o do JSON — NÃO inclua null ou "não informado".
+
+Campos possíveis:
+- email: string (endereço de e-mail)
+- patrimonio: string (ex: "R$ 3 milhões", "uns 5 milhões", "entre 2 e 4 milhões")
+- patrimonioNum: number (estimativa em reais — se o cliente diz "3 milhões" → 3000000; "uns 500k" → 500000)
+- cidade: string (cidade onde mora ou trabalha)
+- estado: string (sigla — SP, RJ, MG, etc.)
+- profissao: string (cargo ou profissão mencionada)
+- perfil: string ("Conservador" | "Moderado" | "Arrojado" — inferido pelo tom sobre risco)
+- instituicoes: array de strings — IDs dos bancos/corretoras mencionados:
+    "btg" = BTG Pactual
+    "xp"  = XP Investimentos
+    "bradesco" = Bradesco
+    "itau" = Itaú / Itaú Private
+    "safra" = Safra
+    "nubank" = Nubank / Rico / Clear
+    "outro" = qualquer outro banco ou corretora mencionada
+- investimentos: string (descrição livre do que o cliente mencionou sobre seus investimentos)
+- nicho: string — apenas se claramente identificável:
+    "medico_cirurgiao" | "advogado_tributarista" | "ceo_empresario" | "dentista_especialista" | "engenheiro_executivo"
+
+Exemplo de retorno: {"email":"joao@gmail.com","patrimonio":"R$ 2 milhões","patrimonioNum":2000000,"cidade":"Campinas","estado":"SP","instituicoes":["xp","bradesco"]}`;
+
+const BANCOS_ALIASES = {
+  btg: ['btg','btg pactual','banco btg'],
+  xp:  ['xp','xp investimentos','xp inc'],
+  bradesco: ['bradesco','banco bradesco','brade'],
+  itau: ['itaú','itau','itaú private','itaú personnalité','personnalité'],
+  safra: ['safra','banco safra','j. safra'],
+  nubank: ['nubank','nu','rico','clear','nu invest'],
+};
+
+async function extrairDadosConversa(mensagemCliente, lead) {
+  // Não extrai se a mensagem for muito curta ou só confirmação
+  const words = mensagemCliente.trim().split(/\s+/).length;
+  if (words < 3) return {};
+
+  try {
+    const contextoAtual = `Lead atual — nome: ${lead.nome}, profissão: ${lead.profissao || '?'}, cidade: ${lead.cidade || '?'}, patrimônio: ${lead.patrimonio || '?'}, bancos: ${lead.instituicoes || '[]'}`;
+
+    const res = await client.messages.create({
+      model: 'claude-haiku-4-5-20251001', // modelo rápido e barato para extração
+      max_tokens: 200,
+      system: EXTRACAO_SYSTEM,
+      messages: [{
+        role: 'user',
+        content: `${contextoAtual}\n\nMENSAGEM DO CLIENTE:\n${mensagemCliente}`
+      }]
+    });
+
+    const raw = res.content[0].text.trim();
+    const json = JSON.parse(raw.replace(/^```json?\s*/,'').replace(/\s*```$/,''));
+
+    // Só atualiza campos que estão atualmente vazios/desconhecidos no lead
+    const update = {};
+
+    if (json.email && !lead.email) update.email = json.email;
+    if (json.patrimonio && (!lead.patrimonio || lead.patrimonio === '')) update.patrimonio = json.patrimonio;
+    if (json.patrimonioNum && json.patrimonioNum > 0 && (!lead.patrimonioNum || lead.patrimonioNum === 0)) update.patrimonioNum = json.patrimonioNum;
+    if (json.cidade && (!lead.cidade || lead.cidade === '')) update.cidade = json.cidade;
+    if (json.estado && (!lead.estado || lead.estado === '')) update.estado = json.estado;
+    if (json.profissao && (!lead.profissao || lead.profissao === '')) update.profissao = json.profissao;
+    if (json.perfil && lead.perfil === 'Moderado') update.perfil = json.perfil; // só sobrescreve o padrão
+    if (json.nicho && lead.nicho === 'medico_cirurgiao') update.nicho = json.nicho; // só sobrescreve se ainda for o default
+
+    if (json.investimentos) {
+      // Guarda descrição de investimentos nas tags
+      const tagsAtuais = (() => { try { return JSON.parse(lead.tags || '[]'); } catch { return []; } })();
+      const tagInvest = `inv:${json.investimentos.slice(0, 80)}`;
+      if (!tagsAtuais.some(t => t.startsWith('inv:'))) {
+        update.tags = JSON.stringify([...tagsAtuais, tagInvest]);
+      }
+    }
+
+    if (json.instituicoes && Array.isArray(json.instituicoes) && json.instituicoes.length > 0) {
+      const atuais = (() => { try { return JSON.parse(lead.instituicoes || '[]'); } catch { return []; } })();
+      const merged = [...new Set([...atuais, ...json.instituicoes])];
+      if (merged.length > atuais.length) {
+        update.instituicoes = JSON.stringify(merged);
+      }
+    }
+
+    if (Object.keys(update).length > 0) {
+      console.log(`[Extração] ${lead.nome}: novos dados →`, Object.keys(update).join(', '));
+    }
+
+    return update;
+  } catch (err) {
+    // Extração silenciosa — nunca bloqueia o fluxo principal
+    if (process.env.NODE_ENV !== 'production') console.warn('[Extração] erro:', err.message);
+    return {};
+  }
+}
+
+module.exports = { gerarAbertura, responder, gerarMensagemReengajamento4Meses, detectarCessarContato, temInformacoesCompletas, extrairDadosConversa };

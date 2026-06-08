@@ -12,6 +12,7 @@ function getPrisma() {
 }
 
 const sofia = require('./sofia');
+const { extrairDadosConversa } = require('./sofia');
 const { sendWhatsApp, extractPhoneFromWebhook, extractTextFromWebhook, isIncomingMessage } = require('./zapi');
 const { podendoAgendar } = require('./scheduler');
 const { notificarReuniaoConfirmada } = require('./plugins/notificacao');
@@ -50,7 +51,7 @@ app.get('/api/leads', async (req, res) => {
 });
 
 app.post('/api/leads', async (req, res) => {
-  const { nome, whatsapp, nicho, regiao, patrimonio, profissao, perfil, cidade, estado, instituicoes, tags } = req.body;
+  const { nome, whatsapp, email, nicho, regiao, patrimonio, profissao, perfil, cidade, estado, instituicoes, tags } = req.body;
   if (!nome || !whatsapp) return res.status(400).json({ error: 'nome e whatsapp são obrigatórios' });
 
   const db = getPrisma();
@@ -58,6 +59,7 @@ app.post('/api/leads', async (req, res) => {
     const lead = await db.lead.create({
       data: {
         nome, whatsapp,
+        email:       email       || '',
         nicho:       nicho       || 'medico_cirurgiao',
         regiao:      regiao      || 'sudeste',
         patrimonio:  patrimonio  || '',
@@ -146,11 +148,15 @@ app.post('/api/webhook/whatsapp', async (req, res) => {
 
       await db.mensagem.create({ data: { leadId: lead.id, role: 'user', content: userMsg } });
 
-      const { resposta, novoEstagio, agendou, cessarContato } = await sofia.responder(lead, userMsg);
+      // Resposta da Sofia + extração de dados rodam em paralelo
+      const [{ resposta, novoEstagio, agendou, cessarContato }, dadosExtraidos] = await Promise.all([
+        sofia.responder(lead, userMsg),
+        extrairDadosConversa(userMsg, lead)
+      ]);
       await db.mensagem.create({ data: { leadId: lead.id, role: 'assistant', content: resposta } });
 
       const agora = new Date();
-      const updateData = { estagioConv: novoEstagio, ultimaInteracao: agora };
+      const updateData = { estagioConv: novoEstagio, ultimaInteracao: agora, ...dadosExtraidos };
 
       if (cessarContato) {
         updateData.cessarContato = true;
