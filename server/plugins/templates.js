@@ -1,26 +1,55 @@
 /**
- * Plugin: Templates A/B por Nicho
- * Biblioteca de mensagens de abertura testadas, com rastreamento de qual variante
- * gera mais respostas. Após 20 envios por variante, usa só a melhor.
+ * Templates de abertura — Humanizados, sem assumir nicho
+ * Sofia se apresenta e gera curiosidade. O nicho é validado APÓS a resposta do cliente.
+ * Teste A/B: após 20 envios por variante, usa a de maior taxa de resposta.
  */
 
 const TEMPLATES = {
+  // ── Templates universais — não assumem profissão ───────────────────────────
+  universal: [
+    {
+      id: 'u_a',
+      texto: (nome) => `Olá ${nome}! Tudo bem?
+
+Sou a Sofia, parceira do Hariton Gomes aqui na Altum Wealth. Ele me pediu para entrar em contato com você — trabalha com advisory independente, sem os conflitos dos grandes bancos, e costuma abrir perspectivas que a maioria das pessoas nunca ouviu do gerente.
+
+Como você está pensando o seu patrimônio hoje? Está satisfeito com o que tem ou sentindo que poderia estar funcionando melhor?`
+    },
+    {
+      id: 'u_b',
+      texto: (nome) => `Oi ${nome}! Como vai?
+
+Sou Sofia, da Altum Wealth — trabalho com o Hariton Gomes, um advisor independente que atende quem construiu patrimônio relevante e quer que ele trabalhe de verdade, sem os conflitos de interesse dos bancos tradicionais.
+
+O Hariton me pediu para falar com você especificamente. Você tem 15 minutinhos para uma conversa diagnóstica com ele esta semana?`
+    },
+    {
+      id: 'u_c',
+      texto: (nome) => `Oi ${nome}! Aqui é a Sofia, da Altum Wealth.
+
+Trabalhamos com um modelo diferente dos bancos: advisory 100% fee-based, sem comissão de produto — o que significa que o Hariton só recomenda o que é bom para você, não o que dá mais margem para ele.
+
+O Hariton quis especificamente entrar em contato. Você tem disponibilidade para uma conversa rápida de 15 minutos esta semana?`
+    }
+  ],
+
+  // ── Templates específicos — usados SOMENTE se profissão já foi confirmada ──
   medico_cirurgiao: [
     {
       id: 'mc_a',
       texto: (nome, cidade) => `Olá Dr(a). ${nome}! Tudo bem?
 
-Sou a Sofia, da Altum Wealth. Trabalho com médicos cirurgiões aqui em ${cidade || 'sua cidade'} que estão buscando proteger o patrimônio de forma independente — longe dos conflitos dos grandes bancos.
+Sou a Sofia, da Altum Wealth. Hariton pediu para entrar em contato — ele trabalha especificamente com médicos especialistas aqui em ${cidade || 'sua cidade'} que querem proteger o que construíram, longe dos conflitos dos grandes bancos.
 
-Muitos colegas já diversificaram parte do que construíram em dólar, com blindagem patrimonial real. Seria ótimo mostrar como funciona em apenas 15 minutos com nosso advisor. Terça ou quinta-feira ficaria melhor pra você?`
+Você tem 15 minutos esta semana para uma conversa diagnóstica com ele? Terça ou quinta ficaria melhor?`
     },
     {
       id: 'mc_b',
       texto: (nome) => `Boa tarde, Dr(a). ${nome}!
 
-Vi seu perfil e precisei entrar em contato — trabalho com especialistas que construíram patrimônio expressivo e querem protegê-lo de verdade, sem os conflitos de interesse do seu banco atual.
+Sou Sofia, parceira do Hariton Gomes na Altum Wealth. Ele tem trabalhado com cirurgiões que acumularam patrimônio significativo e querem dar um próximo passo — proteção real, sem os conflitos de interesse do banco atual.
 
-O Hariton, nosso advisor, tem 15 minutinhos para um diagnóstico rápido esta semana. Sem compromisso. Faz sentido conversarmos?`
+Faz sentido trocar uma ideia de 15 minutos? Sem compromisso.`
     }
   ],
 
@@ -29,17 +58,9 @@ O Hariton, nosso advisor, tem 15 minutinhos para um diagnóstico rápido esta se
       id: 'at_a',
       texto: (nome) => `Olá Dr(a). ${nome}! Como vai?
 
-Sou Sofia, da Altum Wealth. Como tributarista, você conhece como poucos o valor de uma estrutura bem montada — por isso achei que faria sentido conversar.
+Sou Sofia, da Altum Wealth. Como tributarista, você sabe como poucos o valor de uma estrutura bem montada — por isso o Hariton quis entrar em contato.
 
-Trabalhamos com advogados que desejam eficiência fiscal real no patrimônio pessoal: offshore, trusts e proteção sucessória feitos do jeito certo. Teria 15 min esta semana para o Hariton apresentar as possibilidades para o seu cenário?`
-    },
-    {
-      id: 'at_b',
-      texto: (nome) => `Olá Dr(a). ${nome}!
-
-Sou a Sofia Mendes da Altum Wealth. Trabalho com alguns dos maiores tributaristas do Brasil que, curiosamente, são os últimos a organizar o próprio patrimônio.
-
-O Hariton, nosso advisor fee-based, faz um diagnóstico de 15 minutos totalmente personalizado. Sem produtos de prateleira, sem conflito de interesse. Valeria uma conversa rápida?`
+Teria 15 min esta semana para uma conversa sobre o seu cenário pessoal? Tenho certeza que vai ser útil.`
     }
   ],
 
@@ -48,17 +69,9 @@ O Hariton, nosso advisor fee-based, faz um diagnóstico de 15 minutos totalmente
       id: 'ce_a',
       texto: (nome) => `Olá ${nome}! Tudo bem?
 
-Sou Sofia, da Altum Wealth. Trabalho com CEOs e empresários que já construíram muito no Brasil e agora querem proteger esse patrimônio de forma inteligente — com parte em dólar e estrutura para sucessão familiar.
+Sou Sofia, da Altum Wealth — advisory independente, sem os conflitos dos bancos. O Hariton me pediu para falar com você sobre proteção e diversificação do seu patrimônio pessoal.
 
-O Hariton, nosso advisor independente, tem 15 minutos livres esta semana. É uma conversa rápida, sem compromisso, só para entender seu cenário. Faz sentido para você?`
-    },
-    {
-      id: 'ce_b',
-      texto: (nome) => `Boa tarde, ${nome}!
-
-Sofia aqui, da Altum Wealth. Aqui uma pergunta direta: qual % do seu patrimônio está fora do Brasil?
-
-A maioria dos empresários com quem converso está 100% exposta ao risco-Brasil — e isso muda quando eles conhecem nosso modelo. 15 minutos com o Hariton fazem a diferença. Tem disponibilidade esta semana?`
+Uma pergunta direta: qual % do seu patrimônio está fora do Brasil hoje? Vale uma conversa de 15 min?`
     }
   ],
 
@@ -67,9 +80,9 @@ A maioria dos empresários com quem converso está 100% exposta ao risco-Brasil 
       id: 'de_a',
       texto: (nome, cidade) => `Olá Dr(a). ${nome}!
 
-Sou Sofia, da Altum Wealth. Trabalhamos com dentistas especialistas aqui em ${cidade || 'sua cidade'} que construíram um belo patrimônio com muito esforço — e agora querem fazê-lo trabalhar com a mesma eficiência.
+Sou Sofia, da Altum Wealth. O Hariton trabalha com especialistas da saúde aqui em ${cidade || 'sua cidade'} que construíram patrimônio relevante e querem fazê-lo trabalhar com mais eficiência.
 
-O Hariton, nosso advisor, tem uma visão muito específica para profissionais da saúde. Vale 15 minutinhos de conversa? Qual dia da semana costuma ser mais tranquilo pra você?`
+Vale 15 minutinhos de conversa esta semana?`
     }
   ],
 
@@ -78,37 +91,36 @@ O Hariton, nosso advisor, tem uma visão muito específica para profissionais da
       id: 'ee_a',
       texto: (nome) => `Olá ${nome}! Como vai?
 
-Sou Sofia, da Altum Wealth. Trabalho com executivos sênior que acumularam patrimônio expressivo — muitas vezes concentrado em ações da empresa ou em poucos produtos nacionais.
+Sou Sofia, da Altum Wealth. O Hariton me pediu para entrar em contato — ele trabalha com executivos sênior que acumularam patrimônio expressivo, muitas vezes concentrado em uma única empresa ou em ativos nacionais.
 
-O Hariton, nosso advisor fee-based, faz diagnósticos de 15 minutos para profissionais como você — sem custo, sem compromisso. O objetivo é só entender seu cenário atual. Teria disponibilidade esta semana?`
+Teria 15 minutos esta semana para uma conversa diagnóstica? Sem compromisso.`
     }
   ]
 };
 
-function selecionarTemplate(nicho, statsTemplates = {}) {
-  const opcoes = TEMPLATES[nicho] || TEMPLATES.medico_cirurgiao;
-  if (opcoes.length === 1) return opcoes[0];
+function selecionarTemplate(nicho, statsTemplates = {}, profissaoConfirmada = false) {
+  // Se profissão ainda não confirmada, usa template universal
+  const pool = (!profissaoConfirmada && TEMPLATES.universal) ? TEMPLATES.universal : (TEMPLATES[nicho] || TEMPLATES.universal);
+  if (pool.length === 1) return pool[0];
 
-  // Após 20 usos por variante, usa a de melhor taxa de resposta
   const stats = statsTemplates[nicho] || {};
-  const temDadosSuficientes = opcoes.every(t => (stats[t.id]?.envios || 0) >= 20);
+  const temDados = pool.every(t => (stats[t.id]?.envios || 0) >= 20);
 
-  if (temDadosSuficientes) {
-    return opcoes.reduce((melhor, t) => {
-      const taxaMelhor = (stats[melhor.id]?.respostas || 0) / (stats[melhor.id]?.envios || 1);
-      const taxaT = (stats[t.id]?.respostas || 0) / (stats[t.id]?.envios || 1);
-      return taxaT > taxaMelhor ? t : melhor;
+  if (temDados) {
+    return pool.reduce((best, t) => {
+      const tb = (stats[best.id]?.respostas || 0) / Math.max(stats[best.id]?.envios || 1, 1);
+      const tt = (stats[t.id]?.respostas || 0) / Math.max(stats[t.id]?.envios || 1, 1);
+      return tt > tb ? t : best;
     });
   }
 
-  // Ainda em teste A/B: alterna entre variantes
-  const totalEnvios = opcoes.reduce((s, t) => s + (stats[t.id]?.envios || 0), 0);
-  const idx = totalEnvios % opcoes.length;
-  return opcoes[idx];
+  const total = pool.reduce((s, t) => s + (stats[t.id]?.envios || 0), 0);
+  return pool[total % pool.length];
 }
 
 function gerarMensagemAbertura(lead, statsTemplates = {}) {
-  const template = selecionarTemplate(lead.nicho, statsTemplates);
+  // Abertura inicial: sempre usa template universal (sem assumir nicho)
+  const template = selecionarTemplate(lead.nicho, statsTemplates, false);
   return {
     templateId: template.id,
     mensagem: template.texto(lead.nome.split(' ')[0], lead.cidade)

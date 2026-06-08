@@ -1,64 +1,81 @@
 const Anthropic = require('@anthropic-ai/sdk');
 const { podendoAgendar } = require('./scheduler');
 const { detectarObjecao, gerarInstrucaoObjecao } = require('./skills/objecoes');
-const { obterPerguntaQualificacao, extrairInsightsRespostas } = require('./skills/qualificacao');
+const { extrairInsightsRespostas } = require('./skills/qualificacao');
 const { getContextoHorario } = require('./skills/horario-smart');
 const { gerarMensagemAbertura } = require('./plugins/templates');
 
 const client = new Anthropic();
 
-// ─── Persona base ─────────────────────────────────────────────────────────────
+// ─── Persona Sofia ────────────────────────────────────────────────────────────
 
-const SOFIA_SYSTEM = `Você é Sofia Mendes, secretária particular sênior do advisor Hariton Gomes (Altum Wealth).
+const SOFIA_SYSTEM = `Você é Sofia Mendes — profissional sênior do mercado financeiro com 14 anos de experiência em Private Banking, Family Office e Wealth Management. Trabalha diretamente com o advisor Hariton Gomes na Altum Wealth.
 
-IDENTIDADE:
-- Nome: Sofia Mendes — 12 anos de experiência no mercado financeiro de alta renda (Private Banking, Family Office, Wealth Management)
-- Empresa: Altum Wealth (advisory fee-based independente, sem conflito de interesse)
-- Parceiro: Hariton Gomes — advisor responsável pelas estratégias e reuniões
+QUEM VOCÊ É:
+- Não é secretária, é parceira de negócios do Hariton — você entende profundamente de patrimônio, offshore, proteção e mercado
+- Fala como alguém que já atendeu centenas de clientes de alta renda — com naturalidade, sem roteiro
+- Você tem opiniões e perspectivas próprias baseadas em experiência real de mercado
+- Se tratada como IA ou robô, responde com elegância: "Sou humana, sim — e muito atenta ao que o mercado está fazendo"
 
-SEU ÚNICO OBJETIVO: Agendar uma conversa diagnóstica de 15 minutos entre o cliente e Hariton Gomes.
+SEU ÚNICO OBJETIVO AGORA: Marcar 15 minutos de conversa diagnóstica entre o cliente e Hariton. Nada mais.
 
-PERSONALIDADE E TOM:
-- Calorosa, refinada e discreta — como uma amiga elegante genuinamente interessada em ajudar
-- Sofisticada mas nunca fria ou robótica, nunca vendedora, nunca agressiva
-- Usa o primeiro nome do cliente naturalmente e com carinho
-- Máximo 3 parágrafos curtos por mensagem — objetiva e elegante
-- Tom de WhatsApp: profissional mas próximo, sem excessos formais
-- Sempre termina com uma pergunta fechada (sim/não ou escolha entre 2 opções)
+TOM E ESTILO:
+- WhatsApp sênior de mercado: direto, caloroso, sem formalidade excessiva
+- Usa o primeiro nome da pessoa naturalmente, como se já se conhecessem
+- Máximo 3 parágrafos curtos — nunca parece um email corporativo
+- Termina sempre com UMA pergunta fechada (sim/não ou 2 opções de horário)
+- Demonstra empatia genuína com a realidade do cliente, não compaixão artificial
+- Quando usa humor leve, é refinado — nunca soa forçado
+- Referencia o mercado atual quando oportuno: "com o cenário que está aí..."
 
-REGRAS ABSOLUTAS:
-1. NUNCA revele que é IA ou assistente virtual — você é Sofia Mendes, humana
-2. NUNCA mencione taxas, rentabilidade, fundos ou produtos específicos
-3. NUNCA pressione — sugira, acolha, ouça
-4. Se o cliente disser que NÃO quer mais receber contato (qualquer variação: "para de me ligar", "não quero mais", "me tire da lista", "não me contate", "STOP", "chega"), inclua [CESSAR_CONTATO] ao final da resposta — NUNCA haverá mais contato após isso
-5. Quando confirmar reunião, inclua [REUNIAO_CONFIRMADA] ao final da resposta
+FLUXO DA CONVERSA — SIGA OBRIGATORIAMENTE:
+1. ABERTURA: Contato inicial caloroso e humanizado. NUNCA mencione nicho/profissão neste momento. Apresente-se, gere curiosidade sobre a Altum e faça UMA pergunta suave e aberta sobre o momento atual do cliente.
 
-DIFERENCIAIS DA ALTUM WEALTH:
-- Modelo fiduciário / fee-based: alinhamento 100% com o cliente, zero conflito de interesse
-- Não distribui produtos de prateleira — estratégias 100% personalizadas
-- Não concorre com o banco atual do cliente — atua como auditoria fiduciária externa
-- Especialidade: diversificação internacional, proteção patrimonial, planejamento sucessório
-- Acesso a estruturas offshore, fundos exclusivos e planejamento sucessório
+2. VALIDAÇÃO DE NICHO (obrigatório antes de qualquer argumento de venda): Após a primeira resposta do cliente, confirme naturalmente quem ele é. Exemplo: "Pelo que o Hariton me contou, você é [profissão] — ainda é isso mesmo, certo?" ou "Você ainda está atuando na área de [área]?". SÓ avance para argumentos de nicho APÓS esta confirmação.
 
-Responda SEMPRE em português brasileiro.`;
+3. QUALIFICAÇÃO: Com o nicho confirmado, faça 1-2 perguntas sobre o cenário atual de investimentos. Natural, como curiosidade genuína.
 
-// ─── Nichos ───────────────────────────────────────────────────────────────────
+4. CONEXÃO: Use os dados coletados para mostrar que você entende a situação específica dele. Crie urgência real (não apelo emocional vazio) baseado em fatos de mercado.
+
+5. AGENDAMENTO: Proponha os 15 minutos com Hariton de forma natural. Ofereça 2 opções de dia.
+
+6. CONFIRMAÇÃO: Ao confirmar reunião, inclua [REUNIAO_CONFIRMADA] ao final.
+
+DIFERENCIAIS DA ALTUM QUE VOCÊ CONHECE BEM:
+- Modelo fiduciário fee-based: Hariton não ganha comissão de produto — só alinhado com o cliente
+- Não concorre com o banco atual: atua como auditoria patrimonial externa
+- Especialidade real: diversificação internacional, offshore estruturado, proteção patrimonial, sucessão familiar
+- Acesso a estruturas que os bancos tradicionais não oferecem diretamente
+
+REGRAS INEGOCIÁVEIS:
+1. NUNCA mencione taxas, rentabilidade passada ou produtos específicos
+2. NUNCA pressione — quando o cliente hesita, ouça mais, pressione menos
+3. Se o cliente pedir para parar o contato (qualquer variação: "não quero mais", "para de me mandar mensagem", "STOP", "me tire da lista"): responda com elegância e inclua [CESSAR_CONTATO] ao final
+4. Se confirmar reunião: inclua [REUNIAO_CONFIRMADA] ao final
+5. Responda SEMPRE em português brasileiro coloquial refinado
+
+CONTEXTO DO MERCADO QUE VOCÊ USA QUANDO OPORTUNO:
+- Dólar oscilando — patrimônio 100% em real está exposto
+- Juros altos no Brasil parecem seguros mas não protegem contra inflação real de longo prazo
+- Lei 14.754/2023 mudou o jogo para quem tem offshore — quem estruturou certo está se beneficiando
+- Grandes bancos têm conflito de interesse estrutural — o produto que eles vendem é o produto que paga mais comissão para eles`;
+
+// ─── Nichos — contexto e dores ────────────────────────────────────────────────
 
 const NICHOS_CONTEXTO = {
-  medico_cirurgiao:      'Médico cirurgião — dor principal: blindagem patrimonial e proteção contra processos civis. Gatilho: "o risco de um processo pode comprometer anos de trabalho". Explore proteção em dólar e separação do patrimônio pessoal do profissional.',
-  advogado_tributarista: 'Advogado tributarista — sofisticado e técnico. Dor: "você protege o patrimônio dos seus clientes, mas quem protege o seu?". Use linguagem de trusts, offshore, eficiência fiscal pós-Lei 14.754/2023.',
-  ceo_empresario:        'CEO/Empresário — dor: concentração de risco no Brasil e na própria empresa. Gatilho: "uma desvalorização do real ou instabilidade regulatória pode comprometer o que você construiu". Explore diversificação cambial e proteção da sucessão empresarial.',
-  dentista_especialista: 'Dentista especialista — semelhante ao médico, tom mais próximo. Dor: simplificação e proteção do patrimônio, que tende a estar pulverizado. Gatilho: "você trabalha muito para acumular — quem está garantindo que esse patrimônio vai crescer protegido?',
-  engenheiro_executivo:  'Executivo sênior — provavelmente com stock options e risco concentrado na empresa empregadora. Dor: "toda a sua riqueza depende de uma única empresa — se ela tropeçar, o que sobra?". Explore diversificação além do empregador.'
+  medico_cirurgiao:      'Médico cirurgião. Dor central: blindagem do patrimônio pessoal contra processos civis e trabalhistas — um processo pode comprometer décadas de trabalho. Segundo vetor: patrimônio inteiro em BRL, sem proteção cambial. Gatilho emocional: "o que você construiu pode desaparecer em uma sentença".',
+  advogado_tributarista: 'Advogado tributarista — tecnicamente sofisticado, sabe da teoria mas muitas vezes negligencia o próprio patrimônio. Use linguagem técnica: trusts, offshore, Lei 14.754, eficiência fiscal. Dor: "você estrutura o patrimônio dos seus clientes com perfeição, mas e o seu?"',
+  ceo_empresario:        'CEO/Empresário. Concentração de risco: empresa + patrimônio pessoal + exposição cambial — tudo no Brasil. Dor: "uma crise regulatória ou desvalorização do real pode desfazer o que você levou anos construindo". Gatilho: diversificação geográfica como gestão de risco, não fuga.',
+  dentista_especialista: 'Dentista especialista (implante, ortodontia, etc.). Constrói patrimônio relevante mas raramente o organiza. Dor: "você trabalha muito para acumular — mas o dinheiro não está trabalhando para você com a mesma eficiência". Gatilho: simplicidade + proteção.',
+  engenheiro_executivo:  'Executivo sênior com stock options e risco concentrado na empresa empregadora. Dor: "toda a sua riqueza depende de uma única empresa — se ela tropeçar ou te demitir, o que sobra?". Gatilho: diversificação além do empregador como inteligência patrimonial.'
 };
 
-// Dores mapeadas por nicho para geração de urgência quando lead já está qualificado
 const DORES_NICHO = {
-  medico_cirurgiao:      ['exposição patrimonial a processos judiciais', 'todo o patrimônio ainda em reais e em risco regulatório', 'ausência de blindagem jurídica no exterior'],
-  advogado_tributarista: ['tributação crescente sobre o patrimônio local', 'falta de eficiência fiscal em estruturas offshore', 'risco de sucessão sem planejamento formal'],
-  ceo_empresario:        ['concentração total de risco no Brasil e na empresa', 'exposição cambial sem hedge', 'ausência de governança para sucessão familiar'],
-  dentista_especialista: ['patrimônio pulverizado sem estratégia de proteção', 'baixa rentabilidade em aplicações convencionais de banco', 'nenhuma proteção internacional'],
-  engenheiro_executivo:  ['80%+ da riqueza concentrada em uma única empresa', 'stock options sem plano de diversificação', 'risco de lockup em momento de queda']
+  medico_cirurgiao:      ['exposição patrimonial a processos judiciais sem estrutura de proteção', 'patrimônio inteiro em reais sem hedge cambial', 'ausência de blindagem jurídica e planejamento sucessório'],
+  advogado_tributarista: ['tributação crescente sem estrutura offshore eficiente', 'risco de sucessão sem planejamento formal apesar do conhecimento técnico', 'conflito entre saber e fazer no próprio patrimônio'],
+  ceo_empresario:        ['concentração total de risco no Brasil e na empresa', 'exposição cambial sem hedge em momento de dólar volátil', 'ausência de governança para sucessão familiar e empresarial'],
+  dentista_especialista: ['patrimônio acumulado sem estratégia de proteção ou diversificação', 'dependência total de uma única fonte de renda ativa', 'nenhuma estrutura de proteção contra imprevistos ou processos'],
+  engenheiro_executivo:  ['80%+ da riqueza concentrada em uma única empresa', 'stock options sem plano de diversificação estruturado', 'risco de lockup ou demissão sem colchão patrimonial diversificado']
 };
 
 // ─── Contexto do lead ─────────────────────────────────────────────────────────
@@ -70,52 +87,69 @@ function temInformacoesCompletas(lead) {
   return { patrimonio, profissao, instituicoes, completo: patrimonio && profissao };
 }
 
-function construirContextoLead(lead) {
-  const nichoCtx  = NICHOS_CONTEXTO[lead.nicho] || '';
-  const insights  = extrairInsightsRespostas(lead.mensagens || []);
-  const insightsStr = insights.length ? `\nInsights das respostas: ${insights.join(', ')}` : '';
-  const info = temInformacoesCompletas(lead);
+function nichoValidado(lead) {
+  // Considera nicho validado se: houve conversa prévia E o nicho não é o default
+  // OU se o usuário foi adicionado com profissão explícita
+  const temHistorico = (lead.mensagens || []).filter(m => m.role === 'user').length >= 1;
+  const temProfissao = lead.profissao && lead.profissao !== '';
+  return temHistorico && temProfissao;
+}
 
-  const modoStr = info.completo
-    ? '\nMODO: GERAÇÃO DE DOR — você já tem informações sobre este lead. Use os dados para gerar urgência e mostrar o custo de não agir agora.'
-    : '\nMODO: ICE-BREAKER — você não tem informações completas sobre este lead. Seu objetivo é se aproximar, gerar conexão genuína e entender as necessidades antes de qualquer argumento de venda.';
+function construirContextoLead(lead) {
+  const nichoCtx   = NICHOS_CONTEXTO[lead.nicho] || '';
+  const insights   = extrairInsightsRespostas(lead.mensagens || []);
+  const insightsStr = insights.length ? `\nInsights coletados: ${insights.join(', ')}` : '';
+  const info        = temInformacoesCompletas(lead);
+  const validado    = nichoValidado(lead);
+  const userMsgs    = (lead.mensagens || []).filter(m => m.role === 'user').length;
+
+  let modo;
+  if (userMsgs === 0) {
+    modo = 'MODO: ABERTURA — primeira mensagem. Não cite profissão/nicho. Seja calorosa e curiosa.';
+  } else if (!validado || userMsgs === 1) {
+    modo = `MODO: VALIDAÇÃO DE NICHO — confirme naturalmente se o lead é ${lead.profissao || 'profissional da área indicada'} antes de avançar com argumentos específicos.`;
+  } else if (!info.completo) {
+    modo = 'MODO: QUALIFICAÇÃO — nicho confirmado, colete dados de patrimônio e instituição atual de forma natural.';
+  } else {
+    modo = 'MODO: GERAÇÃO DE DOR → AGENDAMENTO — você já tem os dados. Use-os para criar urgência real e propor os 15 minutos.';
+  }
 
   return `[CONTEXTO DO LEAD]
-Nome: ${lead.nome} | Profissão: ${lead.profissao || 'não informada'} | Cidade: ${lead.cidade || 'não informada'}
-Patrimônio: ${lead.patrimonio || 'não informado'} | Perfil: ${lead.perfil}
-Instituições atuais: ${lead.instituicoes !== '[]' ? lead.instituicoes : 'não informadas'}
-Nicho: ${nichoCtx}
-Estágio da conversa: ${lead.estagioConv || 'abertura'}${insightsStr}${modoStr}`;
+Nome: ${lead.nome} | Profissão cadastrada: ${lead.profissao || 'não informada'} | Cidade: ${lead.cidade || 'não informada'}
+Patrimônio: ${lead.patrimonio || 'não informado'} | Perfil: ${lead.perfil} | Mensagens do cliente: ${userMsgs}
+Instituições: ${lead.instituicoes !== '[]' ? lead.instituicoes : 'não informadas'}
+Nicho (cadastrado, ainda não validado com cliente): ${nichoCtx}
+Estágio: ${lead.estagioConv || 'abertura'}${insightsStr}
+
+${modo}`;
 }
 
 // ─── Abertura ─────────────────────────────────────────────────────────────────
 
 async function gerarAbertura(lead, statsTemplates = {}) {
+  // Usa template se disponível
   try {
     const { mensagem } = gerarMensagemAbertura(lead, statsTemplates);
     return mensagem;
   } catch {
-    const info = temInformacoesCompletas(lead);
-    const ctx = construirContextoLead(lead);
+    // Fallback: abertura via IA — humanizada sem assumir nicho
     const horario = getContextoHorario();
+    const primeiroNome = lead.nome.split(' ')[0];
 
-    let instrucaoAbertura;
-    if (info.completo) {
-      // Lead com informações → abertura com dor específica do nicho
-      const dores = DORES_NICHO[lead.nicho] || [];
-      const dorPrincipal = dores[0] || 'proteção e crescimento patrimonial';
-      instrucaoAbertura = `INSTRUÇÃO: Gere a mensagem de abertura inicial para ${lead.nome}. Você já sabe que ele é ${lead.profissao} com patrimônio de ${lead.patrimonio}. Use esta informação para mencionar, de forma natural e sofisticada, o tema de "${dorPrincipal}" — não como argumento de venda, mas como contexto que explica por que o Hariton quis entrar em contato especificamente. Proponha 15 min de conversa diagnóstica.`;
-    } else {
-      // Lead sem informações → ice-breaker caloroso
-      instrucaoAbertura = `INSTRUÇÃO: Gere uma mensagem de abertura tipo ice-breaker para ${lead.nome}. Você não tem informações detalhadas sobre ele. Apresente-se de forma calorosa e genuína, demonstre interesse real na situação dele, e faça UMA pergunta suave para entender o momento financeiro atual — sem parecer questionário. O objetivo é conexão humana primeiro, negócio depois.`;
-    }
+    const instrucao = `INSTRUÇÃO DE ABERTURA:
+Gere uma mensagem de abertura calorosa e humanizada para ${primeiroNome}.
+- NÃO mencione profissão, nicho ou área de atuação — você vai confirmar isso depois
+- Apresente-se brevemente como Sofia da Altum Wealth, parceira do Hariton Gomes
+- Gere curiosidade genuína sobre a Altum (advisory independente, sem conflito de interesse — diferente dos bancos tradicionais)
+- Faça UMA pergunta aberta e suave sobre o momento atual do cliente: "como você está pensando o seu patrimônio hoje?" ou similar
+- Tom: como se fosse uma indicação de amigo comum — warm, não invasivo
+- Máximo 3 parágrafos curtos`;
 
-    const prompt = `${ctx}\n${horario}\n\n${instrucaoAbertura}`;
     const res = await client.messages.create({
       model: 'claude-sonnet-4-6',
-      max_tokens: 380,
+      max_tokens: 350,
       system: SOFIA_SYSTEM,
-      messages: [{ role: 'user', content: prompt }]
+      messages: [{ role: 'user', content: `${horario}\n\n${instrucao}` }]
     });
     return res.content[0].text;
   }
@@ -123,13 +157,12 @@ async function gerarAbertura(lead, statsTemplates = {}) {
 
 // ─── Resposta ─────────────────────────────────────────────────────────────────
 
-// Frases que indicam opt-out / STOP
 const FRASES_CESSAR = [
   'não quero mais', 'nao quero mais', 'para de me', 'pare de me', 'me tire da lista',
   'não me contate', 'nao me contate', 'não entre em contato', 'nao entre em contato',
-  'não quero contato', 'nao quero contato', 'stop', 'chega de mensagem', 'bloqueio',
-  'vai me bloquear', 'não tenho interesse', 'nao tenho interesse', 'me remova',
-  'cancela', 'cancele', 'descadastrar', 'não me mande mais'
+  'não quero contato', 'nao quero contato', 'stop', 'chega de mensagem',
+  'não tenho interesse', 'nao tenho interesse', 'me remova', 'cancela', 'cancele',
+  'descadastrar', 'não me mande mais', 'me bloqueia', 'para de mandar mensagem'
 ];
 
 function detectarCessarContato(mensagem) {
@@ -138,50 +171,64 @@ function detectarCessarContato(mensagem) {
 }
 
 async function responder(lead, mensagemUsuario) {
-  const ctx = construirContextoLead(lead);
+  const ctx     = construirContextoLead(lead);
   const horario = getContextoHorario();
-  const info = temInformacoesCompletas(lead);
+  const info    = temInformacoesCompletas(lead);
+  const validado = nichoValidado(lead);
 
-  // Detectar pedido de cessar contato antes de qualquer resposta
+  // Opt-out
   if (detectarCessarContato(mensagemUsuario)) {
-    const resposta = `${lead.nome.split(' ')[0]}, entendo e respeito completamente. Estou removendo você da nossa lista agora mesmo — não haverá mais nenhum contato da minha parte. Foi um prazer ter conversado com você. Tudo de bom! 🙏`;
+    const resposta = `${lead.nome.split(' ')[0]}, entendido e respeitado. Vou te tirar da lista agora — não haverá mais nenhum contato. Foi um prazer ter chegado até você. Tudo de bom! 🙏`;
     return { resposta, novoEstagio: lead.estagioConv, agendou: false, cessarContato: true, objecaoDetectada: null };
   }
 
-  // Detectar objeção e injetar script
+  // Detectar objeção
   const objecao = detectarObjecao(mensagemUsuario);
   const instrucaoObjecao = objecao ? gerarInstrucaoObjecao(objecao, lead.nome) : '';
 
   // Detectar intenção de agendar
   const msgLower = mensagemUsuario.toLowerCase();
-  const querAgendar = ['sim', 'pode', 'vamos', 'ok', 'claro', 'quando', 'horário', 'horario', 'disponível', 'disponivel', 'agenda', 'quero', 'aceito', 'top', 'combinado', 'feito'].some(w => msgLower.includes(w));
+  const querAgendar = ['sim', 'pode', 'vamos', 'ok', 'claro', 'quando', 'horário', 'horario',
+    'disponível', 'disponivel', 'agenda', 'quero', 'aceito', 'top', 'combinado', 'feito',
+    'pode ser', 'bora', 'tá bom', 'ta bom'].some(w => msgLower.includes(w));
 
   let instrucaoAgendamento = '';
   if (querAgendar && !objecao) {
     const agendamento = await podendoAgendar(new Date());
     if (!agendamento.pode) {
-      instrucaoAgendamento = `\n\nINSTRUÇÃO DE AGENDA: ${agendamento.mensagemSofia} Use esta informação de forma natural.`;
+      instrucaoAgendamento = `\n\nINSTRUÇÃO DE AGENDA: ${agendamento.mensagemSofia}`;
     } else {
-      instrucaoAgendamento = `\n\nINSTRUÇÃO: O cliente quer agendar. Próxima janela: ${agendamento.formatada}. Confirme este horário com o cliente. Se ele aceitar, inclua [REUNIAO_CONFIRMADA] ao final.`;
+      instrucaoAgendamento = `\n\nINSTRUÇÃO: Cliente quer agendar. Próxima janela disponível: ${agendamento.formatada}. Confirme com o cliente. Se aceitar, inclua [REUNIAO_CONFIRMADA] ao final da resposta.`;
     }
   }
 
-  // Modo ice-breaker vs geração de dor
+  // Instrução de modo — baseada no estágio real da conversa
   let instrucaoModo = '';
   const estagioConv = lead.estagioConv || 'abertura';
   const userMsgs = (lead.mensagens || []).filter(m => m.role === 'user');
 
-  if (!info.completo && !objecao && !querAgendar) {
-    // Sem informações: qualificação progressiva humanizada
-    if (userMsgs.length <= 3) {
-      const pergunta = obterPerguntaQualificacao(lead.nicho, userMsgs.length - 1);
-      instrucaoModo = `\n\nINSTRUÇÃO (ICE-BREAKER): Responda de forma genuína e empática. Após responder, incorpore naturalmente esta pergunta de qualificação — como curiosidade genuína, não como interrogatório: "${pergunta}"`;
+  if (!objecao && !querAgendar) {
+    if (!validado && userMsgs.length <= 2) {
+      // Validar nicho antes de qualquer argumento
+      instrucaoModo = `\n\nINSTRUÇÃO (VALIDAÇÃO DE NICHO): Responda à mensagem do cliente com calor e naturalidade. Depois confirme suavemente a profissão/área do cliente antes de avançar — algo como "pelo que o Hariton me contou, você atua em [área], certo?" ou "ainda está na área de [profissão]?". Não avance para argumentos de nicho sem esta confirmação.`;
+    } else if (!info.completo && validado) {
+      // Qualificação suave
+      const perguntas = {
+        medico_cirurgiao:      ['Você concentra seus investimentos no Brasil ou já tem algo internacional?', 'Além da renda da medicina, você tem outros ativos relevantes — imóveis, participação em clínica?'],
+        advogado_tributarista: ['Como você estrutura hoje o seu patrimônio pessoal — PF ou via holding?', 'Já explorou alguma estrutura offshore para eficiência fiscal?'],
+        ceo_empresario:        ['Qual percentual do seu patrimônio pessoal está fora do Brasil hoje?', 'Você tem uma estrutura de holding familiar ou pensa em montar uma?'],
+        dentista_especialista: ['Você investe principalmente onde — banco tradicional ou já tem corretora?', 'Já pensou em diversificar parte do que construiu fora do Brasil?'],
+        engenheiro_executivo:  ['Além do salário, você tem stock options ou participações acumuladas?', 'Como você está pensando a independência financeira — já tem um plano estruturado?']
+      };
+      const listaPerguntas = perguntas[lead.nicho] || perguntas.medico_cirurgiao;
+      const perguntaAtual = listaPerguntas[Math.min(userMsgs.length - 1, listaPerguntas.length - 1)];
+      instrucaoModo = `\n\nINSTRUÇÃO (QUALIFICAÇÃO): Responda de forma genuína e empática. Incorpore naturalmente esta pergunta — como curiosidade real, não questionário: "${perguntaAtual}"`;
+    } else if (info.completo && ['abertura', 'qualificacao', 'conexao'].includes(estagioConv)) {
+      // Geração de dor com dados reais
+      const dores = DORES_NICHO[lead.nicho] || [];
+      const dorAtual = dores[Math.min(userMsgs.length - 1, dores.length - 1)] || dores[0];
+      instrucaoModo = `\n\nINSTRUÇÃO (GERAÇÃO DE DOR → AGENDAMENTO): Você tem dados sobre este lead. Após responder, traga organicamente o tema de "${dorAtual}" — como alguém experiente que reconhece o padrão: "eu vejo isso muito com [perfil dele]...". O objetivo: ele deve sentir que você está falando exatamente da situação dele. Finalize propondo os 15 minutos com Hariton.`;
     }
-  } else if (info.completo && !objecao && !querAgendar && ['abertura', 'qualificacao', 'conexao'].includes(estagioConv)) {
-    // Com informações: gerar dor específica do nicho
-    const dores = DORES_NICHO[lead.nicho] || [];
-    const dorAtual = dores[Math.min(userMsgs.length, dores.length - 1)] || dores[0];
-    instrucaoModo = `\n\nINSTRUÇÃO (GERAÇÃO DE DOR): Você já tem contexto sobre este lead. Após responder à mensagem, traga organicamente o tema de "${dorAtual}" — mostrando que você entende o cenário dele especificamente. O objetivo é que ele sinta: "ela está falando exatamente da minha situação". Finalize com pergunta fechada que conduza ao agendamento.`;
   }
 
   const historico = (lead.mensagens || []).slice(-14).map(m => ({
@@ -189,55 +236,55 @@ async function responder(lead, mensagemUsuario) {
     content: m.content
   }));
 
-  const userContent = [ctx, horario, instrucaoObjecao, instrucaoAgendamento, instrucaoModo, '\n\nMENSAGEM DO CLIENTE:\n' + mensagemUsuario]
-    .filter(Boolean).join('\n');
+  const userContent = [ctx, horario, instrucaoObjecao, instrucaoAgendamento, instrucaoModo,
+    '\n\nMENSAGEM DO CLIENTE:\n' + mensagemUsuario].filter(Boolean).join('\n');
 
   const messages = [...historico, { role: 'user', content: userContent }];
 
   const res = await client.messages.create({
     model: 'claude-sonnet-4-6',
-    max_tokens: 460,
+    max_tokens: 480,
     system: SOFIA_SYSTEM,
     messages
   });
 
   let resposta = res.content[0].text;
-  const agendou = resposta.includes('[REUNIAO_CONFIRMADA]');
+  const agendou       = resposta.includes('[REUNIAO_CONFIRMADA]');
   const cessarContato = resposta.includes('[CESSAR_CONTATO]');
   resposta = resposta.replace('[REUNIAO_CONFIRMADA]', '').replace('[CESSAR_CONTATO]', '').trim();
 
-  // Determinar novo estágio
+  // Determinar estágio
   const r = resposta.toLowerCase();
   let novoEstagio = estagioConv;
-  if (agendou)                                                                    novoEstagio = 'confirmado';
-  else if (r.match(/terça|quinta|qual dia|qual horário|agenda/))                  novoEstagio = 'agendamento';
-  else if (objecao)                                                               novoEstagio = 'objecao';
-  else if (r.match(/diagnóstico|cenário atual|patrimônio|investe|onde investe/))  novoEstagio = 'qualificacao';
-  else if (r.match(/custo|risco|blindagem|proteção|exposto|vulnerável|perdendo/)) novoEstagio = 'conexao';
+  if      (agendou)                                                                         novoEstagio = 'confirmado';
+  else if (r.match(/terça|quinta|segunda|sexta|qual dia|qual horário|agenda para/))         novoEstagio = 'agendamento';
+  else if (objecao)                                                                          novoEstagio = 'objecao';
+  else if (r.match(/diagnóstico|cenário atual|patrimônio|investe|onde investe|estrutura/))  novoEstagio = 'qualificacao';
+  else if (r.match(/custo|risco|blindagem|proteção|exposto|vulnerável|perdendo|dólar/))     novoEstagio = 'conexao';
 
   return { resposta, novoEstagio, agendou, cessarContato, objecaoDetectada: objecao?.id || null };
 }
 
 // ─── Mensagem de reengajamento (4 meses) ──────────────────────────────────────
 
-const REENG4M_SYSTEM = `Você é Sofia Mendes, secretária particular sênior do advisor Hariton Gomes (Altum Wealth).
-Você está retomando contato com um cliente que demonstrou interesse anteriormente mas ficou sem responder.
-SEMPRE mencione o contato anterior de forma respeitosa e natural — mostre que você lembra da conversa e que houve uma razão para esse novo contato agora.
-Use um ângulo novo: uma mudança de mercado, uma nova oportunidade ou um insight relevante para o perfil dele.
-Tom: caloroso, respeitoso, sem pressão. Máximo 2 parágrafos.
-Se o cliente já disse que não quer contato, inclua [CESSAR_CONTATO] ao final.
+const REENG4M_SYSTEM = `Você é Sofia Mendes, profissional sênior da Altum Wealth.
+Está retomando contato com alguém que mostrou interesse anteriormente mas a conversa esfriou.
+Tom: caloroso, respeitoso, sem pressão. Use um ângulo novo — uma mudança de mercado ou insight relevante.
+Mencione o contato anterior de forma natural, sem ser invasivo.
+Máximo 2 parágrafos curtos.
+Se o cliente pediu para parar o contato antes, inclua [CESSAR_CONTATO].
 Responda sempre em português brasileiro.`;
 
 const INSIGHTS_REENG = {
-  medico_cirurgiao:      'as recentes mudanças no CFM sobre responsabilidade civil e o aumento de 40% em ações contra médicos em 2024 tornaram a blindagem patrimonial ainda mais urgente',
-  advogado_tributarista: 'a Receita Federal intensificou a fiscalização de offshores em 2025 — quem não regularizou a tempo já está pagando multas pesadas',
-  ceo_empresario:        'o dólar subiu mais de 30% desde nossa última conversa — empresários com parte do patrimônio em moeda forte protegeram o poder de compra enquanto outros viram a carteira encolher',
-  dentista_especialista: 'o mercado odontológico está consolidando muito rápido — dentistas que não têm um patrimônio organizado e protegido estão ficando para trás na corrida pela independência financeira',
-  engenheiro_executivo:  'saiu um relatório sobre executivos com stock options: os que não tinham plano de diversificação perderam em média 35% do valor líquido quando as ações da empresa oscilaram'
+  medico_cirurgiao:      'as recentes mudanças no CFM sobre responsabilidade civil e o aumento de ações contra médicos tornaram a blindagem patrimonial ainda mais urgente em 2025',
+  advogado_tributarista: 'a Receita intensificou a fiscalização de offshores — quem regularizou certo está tranquilo, quem não regularizou está pagando caro agora',
+  ceo_empresario:        'o dólar oscilou mais de 25% desde nossa última conversa — empresários com diversificação cambial protegeram o patrimônio enquanto outros viram o poder de compra cair',
+  dentista_especialista: 'o mercado de saúde está consolidando rapidamente — dentistas que não têm o patrimônio organizado e protegido estão ficando vulneráveis nessa virada',
+  engenheiro_executivo:  'saiu um relatório sobre executivos com stock options: os que não tinham plano de diversificação perderam em média 30% do valor líquido quando as ações da empresa oscilaram'
 };
 
 async function gerarMensagemReengajamento4Meses(lead) {
-  const insight = INSIGHTS_REENG[lead.nicho] || 'o mercado financeiro mudou muito nos últimos meses e há oportunidades relevantes para o seu perfil';
+  const insight = INSIGHTS_REENG[lead.nicho] || 'o mercado financeiro mudou muito nos últimos meses e há oportunidades muito relevantes para o seu perfil';
   const primeiroNome = lead.nome.split(' ')[0];
 
   const res = await client.messages.create({
@@ -246,12 +293,11 @@ async function gerarMensagemReengajamento4Meses(lead) {
     system: REENG4M_SYSTEM,
     messages: [{
       role: 'user',
-      content: `Gere uma mensagem de reengajamento para ${lead.nome}, ${lead.profissao || 'profissional'} em ${lead.cidade || 'Brasil'}.
-Patrimônio estimado: ${lead.patrimonio || 'não informado'}.
-Contexto do contato anterior: nos falamos há alguns meses e ${lead.nome.split(' ')[0]} demonstrou interesse mas não chegamos a marcar a conversa.
-Novo gancho: ${insight}.
-Referência ao contato anterior: mencione de forma natural que nos falamos anteriormente, sem ser invasivo.
-Finalize com um convite suave para uma conversa diagnóstica de 15 min com o Hariton.`
+      content: `Gere mensagem de reengajamento para ${primeiroNome}, ${lead.profissao || 'profissional'} em ${lead.cidade || 'Brasil'}.
+Patrimônio: ${lead.patrimonio || 'não informado'}.
+Contexto: nos falamos meses atrás, demonstrou interesse mas não chegamos a marcar.
+Gancho atual: ${insight}.
+Finalize com convite suave para 15 min diagnóstico com Hariton.`
     }]
   });
 
@@ -260,99 +306,70 @@ Finalize com um convite suave para uma conversa diagnóstica de 15 min com o Har
 
 // ─── Extração automática de dados do lead ────────────────────────────────────
 
-const EXTRACAO_SYSTEM = `Você é um extrator de dados estruturados para um CRM de private banking.
-Analise a mensagem do cliente e extraia APENAS informações explicitamente mencionadas.
-Retorne um JSON puro (sem markdown, sem explicação) com os campos encontrados.
-Se um campo não foi mencionado, omita-o do JSON — NÃO inclua null ou "não informado".
+const EXTRACAO_SYSTEM = `Extrator de dados estruturados para CRM de private banking.
+Analise a mensagem e extraia APENAS informações explicitamente mencionadas.
+Retorne JSON puro (sem markdown) com campos encontrados. Omita campos não mencionados.
 
-Campos possíveis:
-- email: string (endereço de e-mail)
-- patrimonio: string (ex: "R$ 3 milhões", "uns 5 milhões", "entre 2 e 4 milhões")
-- patrimonioNum: number (estimativa em reais — se o cliente diz "3 milhões" → 3000000; "uns 500k" → 500000)
-- cidade: string (cidade onde mora ou trabalha)
-- estado: string (sigla — SP, RJ, MG, etc.)
-- profissao: string (cargo ou profissão mencionada)
-- perfil: string ("Conservador" | "Moderado" | "Arrojado" — inferido pelo tom sobre risco)
-- instituicoes: array de strings — IDs dos bancos/corretoras mencionados:
-    "btg" = BTG Pactual
-    "xp"  = XP Investimentos
-    "bradesco" = Bradesco
-    "itau" = Itaú / Itaú Private
-    "safra" = Safra
-    "nubank" = Nubank / Rico / Clear
-    "outro" = qualquer outro banco ou corretora mencionada
-- investimentos: string (descrição livre do que o cliente mencionou sobre seus investimentos)
-- nicho: string — apenas se claramente identificável:
-    "medico_cirurgiao" | "advogado_tributarista" | "ceo_empresario" | "dentista_especialista" | "engenheiro_executivo"
+Campos:
+- email: string
+- patrimonio: string (ex: "R$ 3 milhões")
+- patrimonioNum: number (em reais: "3 milhões" → 3000000)
+- cidade: string
+- estado: string (sigla)
+- profissao: string
+- perfil: "Conservador" | "Moderado" | "Arrojado" (inferido pelo tom)
+- instituicoes: array ["btg","xp","bradesco","itau","safra","nubank","outro"]
+- investimentos: string (descrição livre)
+- nicho: "medico_cirurgiao"|"advogado_tributarista"|"ceo_empresario"|"dentista_especialista"|"engenheiro_executivo"
 
-Exemplo de retorno: {"email":"joao@gmail.com","patrimonio":"R$ 2 milhões","patrimonioNum":2000000,"cidade":"Campinas","estado":"SP","instituicoes":["xp","bradesco"]}`;
-
-const BANCOS_ALIASES = {
-  btg: ['btg','btg pactual','banco btg'],
-  xp:  ['xp','xp investimentos','xp inc'],
-  bradesco: ['bradesco','banco bradesco','brade'],
-  itau: ['itaú','itau','itaú private','itaú personnalité','personnalité'],
-  safra: ['safra','banco safra','j. safra'],
-  nubank: ['nubank','nu','rico','clear','nu invest'],
-};
+Exemplo: {"email":"joao@gmail.com","patrimonio":"R$ 2 milhões","patrimonioNum":2000000,"instituicoes":["xp"]}`;
 
 async function extrairDadosConversa(mensagemCliente, lead) {
-  // Não extrai se a mensagem for muito curta ou só confirmação
   const words = mensagemCliente.trim().split(/\s+/).length;
   if (words < 3) return {};
 
   try {
-    const contextoAtual = `Lead atual — nome: ${lead.nome}, profissão: ${lead.profissao || '?'}, cidade: ${lead.cidade || '?'}, patrimônio: ${lead.patrimonio || '?'}, bancos: ${lead.instituicoes || '[]'}`;
-
     const res = await client.messages.create({
-      model: 'claude-haiku-4-5-20251001', // modelo rápido e barato para extração
+      model: 'claude-haiku-4-5-20251001',
       max_tokens: 200,
       system: EXTRACAO_SYSTEM,
       messages: [{
         role: 'user',
-        content: `${contextoAtual}\n\nMENSAGEM DO CLIENTE:\n${mensagemCliente}`
+        content: `Lead: nome=${lead.nome}, profissão=${lead.profissao || '?'}, cidade=${lead.cidade || '?'}, patrimônio=${lead.patrimonio || '?'}\n\nMensagem: ${mensagemCliente}`
       }]
     });
 
-    const raw = res.content[0].text.trim();
+    const raw  = res.content[0].text.trim();
     const json = JSON.parse(raw.replace(/^```json?\s*/,'').replace(/\s*```$/,''));
-
-    // Só atualiza campos que estão atualmente vazios/desconhecidos no lead
     const update = {};
 
-    if (json.email && !lead.email) update.email = json.email;
-    if (json.patrimonio && (!lead.patrimonio || lead.patrimonio === '')) update.patrimonio = json.patrimonio;
-    if (json.patrimonioNum && json.patrimonioNum > 0 && (!lead.patrimonioNum || lead.patrimonioNum === 0)) update.patrimonioNum = json.patrimonioNum;
-    if (json.cidade && (!lead.cidade || lead.cidade === '')) update.cidade = json.cidade;
-    if (json.estado && (!lead.estado || lead.estado === '')) update.estado = json.estado;
-    if (json.profissao && (!lead.profissao || lead.profissao === '')) update.profissao = json.profissao;
-    if (json.perfil && lead.perfil === 'Moderado') update.perfil = json.perfil; // só sobrescreve o padrão
-    if (json.nicho && lead.nicho === 'medico_cirurgiao') update.nicho = json.nicho; // só sobrescreve se ainda for o default
+    if (json.email       && !lead.email)                                          update.email        = json.email;
+    if (json.patrimonio  && !lead.patrimonio)                                     update.patrimonio   = json.patrimonio;
+    if (json.patrimonioNum && json.patrimonioNum > 0 && !lead.patrimonioNum)      update.patrimonioNum = json.patrimonioNum;
+    if (json.cidade      && !lead.cidade)                                         update.cidade       = json.cidade;
+    if (json.estado      && !lead.estado)                                         update.estado       = json.estado;
+    if (json.profissao   && !lead.profissao)                                      update.profissao    = json.profissao;
+    if (json.perfil      && lead.perfil === 'Moderado')                           update.perfil       = json.perfil;
+    if (json.nicho       && lead.nicho  === 'medico_cirurgiao')                   update.nicho        = json.nicho;
 
     if (json.investimentos) {
-      // Guarda descrição de investimentos nas tags
-      const tagsAtuais = (() => { try { return JSON.parse(lead.tags || '[]'); } catch { return []; } })();
-      const tagInvest = `inv:${json.investimentos.slice(0, 80)}`;
-      if (!tagsAtuais.some(t => t.startsWith('inv:'))) {
-        update.tags = JSON.stringify([...tagsAtuais, tagInvest]);
+      const tags = (() => { try { return JSON.parse(lead.tags || '[]'); } catch { return []; } })();
+      if (!tags.some(t => t.startsWith('inv:'))) {
+        update.tags = JSON.stringify([...tags, `inv:${json.investimentos.slice(0,80)}`]);
       }
     }
 
-    if (json.instituicoes && Array.isArray(json.instituicoes) && json.instituicoes.length > 0) {
+    if (json.instituicoes?.length) {
       const atuais = (() => { try { return JSON.parse(lead.instituicoes || '[]'); } catch { return []; } })();
       const merged = [...new Set([...atuais, ...json.instituicoes])];
-      if (merged.length > atuais.length) {
-        update.instituicoes = JSON.stringify(merged);
-      }
+      if (merged.length > atuais.length) update.instituicoes = JSON.stringify(merged);
     }
 
     if (Object.keys(update).length > 0) {
-      console.log(`[Extração] ${lead.nome}: novos dados →`, Object.keys(update).join(', '));
+      console.log(`[Sofia·Extração] ${lead.nome}: →`, Object.keys(update).join(', '));
     }
-
     return update;
   } catch (err) {
-    // Extração silenciosa — nunca bloqueia o fluxo principal
     if (process.env.NODE_ENV !== 'production') console.warn('[Extração] erro:', err.message);
     return {};
   }

@@ -20,7 +20,28 @@ const { calcularScore } = require('./plugins/scoring');
 const { executarReengajamento4Meses, executarReengajamento5Dias } = require('./plugins/reengagement');
 
 const app = express();
-app.use(cors({ origin: process.env.FRONTEND_URL || '*' }));
+// origens permitidas — aceita múltiplas URLs separadas por vírgula + qualquer *.vercel.app do projeto
+const rawOrigin = (process.env.FRONTEND_URL || '*').trim().replace(/[\r\n]+/g, '');
+const allowedOrigins = rawOrigin === '*'
+  ? '*'
+  : rawOrigin.split(',').map(o => o.trim()).filter(Boolean);
+
+app.use(cors({
+  origin: (origin, cb) => {
+    // sem origin = curl/Postman/server-to-server — libera
+    if (!origin) return cb(null, true);
+    // lista wildcard
+    if (allowedOrigins === '*') return cb(null, true);
+    // verifica lista exata
+    if (allowedOrigins.includes(origin)) return cb(null, true);
+    // permite qualquer subdomínio *.vercel.app do projeto crm-ui
+    if (/^https:\/\/crm-ui[^.]*\.vercel\.app$/.test(origin)) return cb(null, true);
+    // permite private-crm* também (backend self-calls)
+    if (/^https:\/\/private-crm[^.]*\.vercel\.app$/.test(origin)) return cb(null, true);
+    cb(new Error(`CORS bloqueado: ${origin}`));
+  },
+  credentials: true,
+}));
 app.use(express.json());
 
 // ─── Health ───────────────────────────────────────────────────────────────────
