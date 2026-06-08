@@ -1,0 +1,34 @@
+{
+  "name": "private-crm-altum",
+  "version": "2.0.0",
+  "description": "Sofia WhatsApp Agent + Private CRM — Altum Wealth",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "nodemon server/index.js",
+    "build": "npx prisma generate",
+    "db:migrate": "npx prisma migrate deploy",
+    "db:push": "npx prisma db push",
+    "db:studio": "npx prisma studio --schema=server/prisma/schema.prisma",
+    "db:generate": "npx prisma generate --schema=server/prisma/schema.prisma"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
+    "@prisma/client": "^5.22.0",
+    "@vercel/functions": "^1.4.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "node-fetch": "^2.7.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.9",
+    "prisma": "^5.22.0"
+  },
+  "prisma": {
+    "schema": "server/prisma/schema.prisma"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

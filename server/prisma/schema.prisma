@@ -1,0 +1,54 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  // Neon PostgreSQL em produção / SQLite em desenvolvimento local
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Lead {
+  id            String     @id @default(cuid())
+  nome          String
+  whatsapp      String     @unique
+  nicho         String
+  regiao        String
+  patrimonio    String     @default("")
+  patrimonioNum Float      @default(0)
+  profissao     String     @default("")
+  perfil        String     @default("Moderado")
+  cidade        String     @default("")
+  estado        String     @default("")
+  instituicoes  String     @default("[]")
+  tags          String     @default("[]")
+  estagio       String     @default("prospeccao")
+  estagioConv   String     @default("abertura")
+  linkedinStatus String    @default("nao_contactado")
+  origem        String     @default("WhatsApp")
+  score         Int        @default(0)
+  reengajado    Boolean    @default(false)
+  templateId    String?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  mensagens     Mensagem[]
+  reunioes      Reuniao[]
+}
+
+model Mensagem {
+  id        String   @id @default(cuid())
+  leadId    String
+  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  role      String
+  content   String
+  timestamp DateTime @default(now())
+}
+
+model Reuniao {
+  id      String   @id @default(cuid())
+  leadId  String
+  lead    Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  data    DateTime
+  status  String   @default("agendada")
+  canal   String   @default("whatsapp")
+}

@@ -1,0 +1,100 @@
+name: Sofia — Automações Agendadas
+
+on:
+  schedule:
+    # Follow-up: a cada hora (minuto 0)
+    - cron: '0 * * * *'
+    # Re-engajamento: às 9h, 15h e 21h UTC (6h, 12h, 18h Brasília)
+    - cron: '0 9,15,21 * * *'
+    # Relatório diário: 10h45 UTC = 7h45 Brasília
+    - cron: '45 10 * * 1-5'
+    # Scoring: a cada 30 minutos
+    - cron: '*/30 * * * *'
+  # Permite executar manualmente pelo painel do GitHub
+  workflow_dispatch:
+    inputs:
+      job:
+        description: 'Qual job executar'
+        required: true
+        default: 'followup'
+        type: choice
+        options: [followup, reengagement, relatorio, scoring, todos]
+
+env:
+  API_URL: ${{ secrets.VERCEL_API_URL }}
+  CRON_SECRET: ${{ secrets.CRON_SECRET }}
+
+jobs:
+  # ── Follow-up automático (toda hora) ────────────────────────────
+  followup:
+    name: Follow-up Automático
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'workflow_dispatch' && (inputs.job == 'followup' || inputs.job == 'todos') ||
+      github.event_name == 'schedule' && startsWith(github.event.schedule, '0 * * * *')
+    steps:
+      - name: Executar follow-up
+        run: |
+          echo "Executando follow-up em $(date -u '+%Y-%m-%d %H:%M UTC')"
+          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" \
+            -X POST "$API_URL/api/cron/followup" \
+            -H "x-cron-secret: $CRON_SECRET" \
+            -H "Content-Type: application/json")
+          echo "Status HTTP: $RESPONSE"
+          if [ "$RESPONSE" != "200" ]; then
+            echo "❌ Falha no follow-up (HTTP $RESPONSE)"
+            exit 1
+          fi
+          echo "✅ Follow-up executado com sucesso"
+
+  # ── Re-engajamento (3x ao dia) ───────────────────────────────────
+  reengagement:
+    name: Re-engajamento de Leads
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'workflow_dispatch' && (inputs.job == 'reengagement' || inputs.job == 'todos') ||
+      github.event_name == 'schedule' && startsWith(github.event.schedule, '0 9,15,21')
+    steps:
+      - name: Executar re-engajamento
+        run: |
+          echo "Executando re-engajamento em $(date -u '+%Y-%m-%d %H:%M UTC')"
+          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" \
+            -X POST "$API_URL/api/cron/reengagement" \
+            -H "x-cron-secret: $CRON_SECRET" \
+            -H "Content-Type: application/json")
+          echo "Status HTTP: $RESPONSE"
+          [ "$RESPONSE" = "200" ] && echo "✅ Re-engajamento executado" || echo "❌ Falha (HTTP $RESPONSE)"
+
+  # ── Relatório diário (7h45 Brasília, seg–sex) ────────────────────
+  relatorio:
+    name: Relatório Diário para Hariton
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'workflow_dispatch' && (inputs.job == 'relatorio' || inputs.job == 'todos') ||
+      github.event_name == 'schedule' && startsWith(github.event.schedule, '45 10')
+    steps:
+      - name: Enviar relatório diário
+        run: |
+          echo "Enviando relatório em $(date -u '+%Y-%m-%d %H:%M UTC')"
+          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" \
+            -X POST "$API_URL/api/cron/relatorio" \
+            -H "x-cron-secret: $CRON_SECRET" \
+            -H "Content-Type: application/json")
+          echo "Status HTTP: $RESPONSE"
+          [ "$RESPONSE" = "200" ] && echo "✅ Relatório enviado para Hariton" || echo "❌ Falha (HTTP $RESPONSE)"
+
+  # ── Lead scoring (a cada 30 min) ─────────────────────────────────
+  scoring:
+    name: Atualizar Score dos Leads
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'workflow_dispatch' && (inputs.job == 'scoring' || inputs.job == 'todos') ||
+      github.event_name == 'schedule' && startsWith(github.event.schedule, '*/30')
+    steps:
+      - name: Atualizar scores
+        run: |
+          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" \
+            -X POST "$API_URL/api/cron/scoring" \
+            -H "x-cron-secret: $CRON_SECRET" \
+            -H "Content-Type: application/json")
+          [ "$RESPONSE" = "200" ] && echo "✅ Scores atualizados" || echo "❌ Falha (HTTP $RESPONSE)"
