@@ -221,6 +221,72 @@ app.post('/api/webhook/whatsapp', async (req, res) => {
   else setImmediate(processar);
 });
 
+// ─── Envio manual de mensagem (CRM → lead) ───────────────────────────────────
+
+app.post('/api/leads/:id/message', async (req, res) => {
+  const { mensagem, canal = 'whatsapp', gerarComSofia = false, contextoExtra = '' } = req.body;
+  if (!mensagem && !gerarComSofia) return res.status(400).json({ error: 'mensagem obrigatória' });
+
+  const db = getPrisma();
+  try {
+    const lead = await db.lead.findUnique({
+      where: { id: req.params.id },
+      include: { mensagens: { orderBy: { timestamp: 'asc' }, take: 16 } }
+    });
+    if (!lead) return res.status(404).json({ error: 'lead não encontrado' });
+
+    let textoFinal = mensagem;
+
+    // Se pediu para Sofia gerar a mensagem
+    if (gerarComSofia || !mensagem) {
+      const { responder, gerarAbertura, NICHOS_CONTEXTO } = require('./sofia');
+      const nichoCtx = NICHOS_CONTEXTO[lead.nicho] || NICHOS_CONTEXTO.medico_cirurgiao;
+      const estagio  = lead.estagioConv || 'abertura';
+      const userMsgs = lead.mensagens.filter(m => m.role === 'user').length;
+      const Anthropic = require('@anthropic-ai/sdk');
+      const ac = new Anthropic();
+
+      const canalInstrucao = {
+        whatsapp: 'WhatsApp direto — máximo 3 parágrafos curtos, tom caloroso e objetivo.',
+        linkedin: 'LinkedIn — mensagem de conexão profissional, máximo 4 linhas, tom respeitoso e direto.',
+        email:    'E-mail — assunto + corpo, máximo 6 linhas, tom executivo e personalizado.'
+      }[canal] || 'WhatsApp';
+
+      const instrucao = `Gere uma mensagem de ${canal} para ${lead.nome.split(' ')[0]} (${lead.profissao || nichoCtx.descricao}, ${lead.cidade || 'Brasil'}).
+Estágio da conversa: ${estagio} (${userMsgs} mensagens trocadas).
+Patrimônio: ${lead.patrimonio || 'não informado'}.
+Canal: ${canalInstrucao}
+Objetivo: retomar ou avançar a conversa em direção ao agendamento dos 15 minutos com Hariton.
+${contextoExtra ? `Contexto adicional: ${contextoExtra}` : ''}
+${userMsgs === 0 ? 'É o primeiro contato — apresente-se e gere curiosidade.' : `Já houve ${userMsgs} resposta(s). Continue de onde parou de forma natural.`}
+Gere SOMENTE o texto da mensagem, sem explicação.`;
+
+      const res2 = await ac.messages.create({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 400,
+        system: `Você é Sofia Mendes, secretária Private Banking sênior da Altum Wealth. Cria mensagens de prospecção altamente personalizadas e eficazes para cada canal. Nunca menciona taxas ou produtos. Sempre em português brasileiro refinado.`,
+        messages: [{ role: 'user', content: instrucao }]
+      });
+      textoFinal = res2.content[0].text.trim();
+    }
+
+    // Envia pelo canal
+    if (canal === 'whatsapp') {
+      const { sendWhatsApp } = require('./zapi');
+      await sendWhatsApp(lead.whatsapp, textoFinal);
+      // Salva no histórico como mensagem da Sofia
+      await db.mensagem.create({ data: { leadId: lead.id, role: 'assistant', content: textoFinal } });
+      await db.lead.update({ where: { id: lead.id }, data: { ultimaInteracao: new Date() } });
+    }
+    // LinkedIn e Email: apenas retorna o texto (envio manual pelo usuário)
+
+    res.json({ ok: true, mensagem: textoFinal, canal });
+  } catch (err) {
+    console.error('[Message] Erro:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ─── Meetings ─────────────────────────────────────────────────────────────────
 
 app.get('/api/meetings/today', async (req, res) => {
