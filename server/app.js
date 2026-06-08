@@ -204,91 +204,91 @@ app.delete('/api/leads/:id', async (req, res) => {
 });
 
 // ─── WhatsApp Webhook ─────────────────────────────────────────────────────────
+// IMPORTANTE: processa SINCRONAMENTE antes de responder.
+// No Vercel serverless, res.json() encerra a função — setImmediate não roda.
+// Z-API aguarda resposta por até 30s; Claude + sendWhatsApp leva ~5s total.
 
 app.post('/api/webhook/whatsapp', async (req, res) => {
-  // Responde imediatamente para o Z-API não retentar
-  res.json({ ok: true });
-
-  if (!isIncomingMessage(req.body)) return;
+  // Mensagens que não precisam de processamento respondem imediatamente
+  if (!isIncomingMessage(req.body)) return res.json({ ok: true, skip: true });
 
   const phone   = extractPhoneFromWebhook(req.body);
   const userMsg = extractTextFromWebhook(req.body);
-  if (!phone || !userMsg) return;
+  if (!phone || !userMsg) return res.json({ ok: true, skip: 'no_data' });
 
-  const processar = async () => {
-    const db = getPrisma();
-    try {
-      const phoneSuffix = phone.replace(/\D/g, '').slice(-8);
-      const leads = await db.lead.findMany({
-        include: {
-          mensagens: { orderBy: { timestamp: 'asc' }, take: 20 },
-          reunioes:  true
-        }
-      });
-      const lead = leads.find(l => l.whatsapp.replace(/\D/g, '').slice(-8) === phoneSuffix);
-      if (!lead) return;
-
-      // Cessar contato: não responde, apenas registra a mensagem
-      if (lead.cessarContato) {
-        console.log(`[Webhook] ${lead.nome}: contato cessado — mensagem ignorada`);
-        await db.mensagem.create({ data: { leadId: lead.id, role: 'user', content: userMsg } });
-        return;
+  const db = getPrisma();
+  try {
+    const phoneSuffix = phone.replace(/\D/g, '').slice(-8);
+    const leads = await db.lead.findMany({
+      include: {
+        mensagens: { orderBy: { timestamp: 'asc' }, take: 20 },
+        reunioes:  true
       }
+    });
+    const lead = leads.find(l => l.whatsapp.replace(/\D/g, '').slice(-8) === phoneSuffix);
+    if (!lead) return res.json({ ok: true, skip: 'lead_not_found' });
 
-      console.log(`[Webhook] ${lead.nome}: "${userMsg.slice(0, 60)}"`);
-
+    // Cessar contato: apenas registra, não responde
+    if (lead.cessarContato) {
       await db.mensagem.create({ data: { leadId: lead.id, role: 'user', content: userMsg } });
+      return res.json({ ok: true, skip: 'cessar_contato' });
+    }
 
-      // Resposta da Sofia + extração de dados rodam em paralelo
-      const [{ resposta, novoEstagio, agendou, cessarContato }, dadosExtraidos] = await Promise.all([
-        sofia.responder(lead, userMsg),
-        extrairDadosConversa(userMsg, lead)
-      ]);
-      await db.mensagem.create({ data: { leadId: lead.id, role: 'assistant', content: resposta } });
+    console.log(`[Webhook] ${lead.nome}: "${userMsg.slice(0, 60)}"`);
+    await db.mensagem.create({ data: { leadId: lead.id, role: 'user', content: userMsg } });
 
-      const agora = new Date();
-      const updateData = { estagioConv: novoEstagio, ultimaInteracao: agora, ...dadosExtraidos };
+    // Sofia gera resposta + extração de dados em paralelo
+    const [sofiaResult, dadosExtraidos] = await Promise.all([
+      sofia.responder(lead, userMsg),
+      extrairDadosConversa(userMsg, lead)
+    ]);
+    const { resposta, novoEstagio, agendou, cessarContato } = sofiaResult;
 
-      if (cessarContato) {
-        updateData.cessarContato = true;
-        updateData.estagio = 'cessado';
-        await db.lead.update({ where: { id: lead.id }, data: updateData });
-        await sendWhatsApp(lead.whatsapp, resposta);
-        console.log(`[Sofia] STOP → ${lead.nome} — contato cessado definitivamente`);
-        return;
-      }
+    await db.mensagem.create({ data: { leadId: lead.id, role: 'assistant', content: resposta } });
 
-      if (agendou) {
-        const ag = await podendoAgendar(new Date());
-        if (ag.pode) {
-          const reuniao = await db.reuniao.create({
-            data: { leadId: lead.id, data: ag.dataReuniao, status: 'agendada', canal: 'whatsapp' }
-          });
-          updateData.estagio = 'reuniao';
-          updateData.semInteresse = false;
-          await notificarReuniaoConfirmada({ ...lead, ...updateData }, reuniao);
-          console.log(`[Agenda] Reunião → ${lead.nome} em ${ag.formatada}`);
-        }
-      }
+    const agora = new Date();
+    const updateData = { estagioConv: novoEstagio, ultimaInteracao: agora, ...dadosExtraidos };
 
-      const leadAtualizado = await db.lead.findUnique({
-        where: { id: lead.id },
-        include: { mensagens: true, reunioes: true }
-      });
-      updateData.score = calcularScore(leadAtualizado);
-
+    if (cessarContato) {
+      updateData.cessarContato = true;
+      updateData.estagio = 'cessado';
       await db.lead.update({ where: { id: lead.id }, data: updateData });
       await sendWhatsApp(lead.whatsapp, resposta);
-
-      console.log(`[Sofia] → ${lead.nome} | estágio: ${novoEstagio} | score: ${updateData.score}`);
-    } catch (err) {
-      console.error('[Webhook] Erro:', err.message);
+      console.log(`[Sofia] STOP → ${lead.nome}`);
+      return res.json({ ok: true, action: 'cessar_contato' });
     }
-  };
 
-  // Vercel: waitUntil injected via middleware; local: setImmediate
-  if (req.waitUntil) req.waitUntil(processar());
-  else setImmediate(processar);
+    if (agendou) {
+      const ag = await podendoAgendar(new Date());
+      if (ag.pode) {
+        const reuniao = await db.reuniao.create({
+          data: { leadId: lead.id, data: ag.dataReuniao, status: 'agendada', canal: 'whatsapp' }
+        });
+        updateData.estagio = 'reuniao';
+        updateData.semInteresse = false;
+        await notificarReuniaoConfirmada({ ...lead, ...updateData }, reuniao);
+        console.log(`[Agenda] Reunião → ${lead.nome} em ${ag.formatada}`);
+      }
+    }
+
+    const leadAtualizado = await db.lead.findUnique({
+      where: { id: lead.id },
+      include: { mensagens: true, reunioes: true }
+    });
+    updateData.score = calcularScore(leadAtualizado);
+
+    await db.lead.update({ where: { id: lead.id }, data: updateData });
+
+    // Envia resposta da Sofia via WhatsApp
+    await sendWhatsApp(lead.whatsapp, resposta);
+
+    console.log(`[Sofia] ✓ → ${lead.nome} | estágio: ${novoEstagio} | score: ${updateData.score}`);
+    return res.json({ ok: true, action: 'responded' });
+
+  } catch (err) {
+    console.error('[Webhook] Erro:', err.message, err.stack);
+    return res.json({ ok: true, error: err.message }); // sempre 200 p/ Z-API não retentar
+  }
 });
 
 // ─── Envio manual de mensagem (CRM → lead) ───────────────────────────────────
@@ -458,17 +458,30 @@ function verificarCron(req, res) {
 app.post('/api/cron/followup', async (req, res) => {
   if (!verificarCron(req, res)) return;
   const { executarFollowup } = require('./plugins/followup');
-  res.json({ ok: true, iniciado: new Date().toISOString() });
   const db = getPrisma();
-  setImmediate(() => executarFollowup(db).catch(console.error));
+  try {
+    const result = await executarFollowup(db);
+    res.json({ ok: true, enviados: result.enviados });
+  } catch (err) {
+    console.error('[Cron Followup]', err.message);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.post('/api/cron/reengagement', async (req, res) => {
   if (!verificarCron(req, res)) return;
-  const { executarReengajamento } = require('./plugins/reengagement');
-  res.json({ ok: true, iniciado: new Date().toISOString() });
+  const { executarReengajamento4Meses, executarReengajamento5Dias } = require('./plugins/reengagement');
   const db = getPrisma();
-  setImmediate(() => executarReengajamento(db).catch(console.error));
+  try {
+    const [r4m, r5d] = await Promise.all([
+      executarReengajamento4Meses(db),
+      executarReengajamento5Dias(db)
+    ]);
+    res.json({ ok: true, reeng4meses: r4m.enviados, reeng5dias: r5d.enviados });
+  } catch (err) {
+    console.error('[Cron Reengagement]', err.message);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.post('/api/cron/scoring', async (req, res) => {
@@ -482,9 +495,59 @@ app.post('/api/cron/scoring', async (req, res) => {
 app.post('/api/cron/relatorio', async (req, res) => {
   if (!verificarCron(req, res)) return;
   const { enviarRelatorioDiario } = require('./plugins/relatorio');
-  res.json({ ok: true, iniciado: new Date().toISOString() });
   const db = getPrisma();
-  setImmediate(() => enviarRelatorioDiario(db).catch(console.error));
+  try {
+    await enviarRelatorioDiario(db);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('[Cron Relatorio]', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── Vercel Native Crons (GET, chamado automaticamente pelo Vercel) ───────────
+// Vercel chama estes endpoints automaticamente conforme o schedule em vercel.json.
+// Não precisam de x-cron-secret — o próprio Vercel garante que só ele chama.
+
+app.get('/api/cron/followup-vercel', async (req, res) => {
+  const { executarFollowup } = require('./plugins/followup');
+  const db = getPrisma();
+  try {
+    const result = await executarFollowup(db);
+    console.log(`[Vercel Cron] Followup: ${result.enviados} enviados`);
+    res.json({ ok: true, enviados: result.enviados });
+  } catch (err) {
+    console.error('[Vercel Cron Followup]', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/cron/reengagement-vercel', async (req, res) => {
+  const { executarReengajamento4Meses, executarReengajamento5Dias } = require('./plugins/reengagement');
+  const db = getPrisma();
+  try {
+    const [r4m, r5d] = await Promise.all([
+      executarReengajamento4Meses(db),
+      executarReengajamento5Dias(db)
+    ]);
+    console.log(`[Vercel Cron] Reeng: 4m=${r4m.enviados}, 5d=${r5d.enviados}`);
+    res.json({ ok: true, reeng4meses: r4m.enviados, reeng5dias: r5d.enviados });
+  } catch (err) {
+    console.error('[Vercel Cron Reengagement]', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/cron/scoring-vercel', async (req, res) => {
+  const { atualizarScores } = require('./plugins/scoring');
+  const db = getPrisma();
+  try {
+    await atualizarScores(db);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('[Vercel Cron Scoring]', err.message);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 module.exports = app;

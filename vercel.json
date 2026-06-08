@@ -4,7 +4,7 @@
     {
       "src": "api/index.js",
       "use": "@vercel/node",
-      "config": { "maxDuration": 30 }
+      "config": { "maxDuration": 60 }
     }
   ],
   "routes": [
@@ -12,6 +12,11 @@
       "src": "/(.*)",
       "dest": "/api/index.js"
     }
+  ],
+  "crons": [
+    { "path": "/api/cron/followup-vercel",    "schedule": "0 * * * *"       },
+    { "path": "/api/cron/reengagement-vercel","schedule": "0 9,15,21 * * *" },
+    { "path": "/api/cron/scoring-vercel",     "schedule": "*/30 * * * *"    }
   ],
   "env": {
     "NODE_ENV": "production"
