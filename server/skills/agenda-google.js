@@ -130,6 +130,19 @@ async function diagnostico() {
     googleEnvKeys: Object.keys(process.env).filter(k => k.startsWith('GOOGLE')).map(k => `${k}(${(process.env[k] || '').length})`)
   };
 
+  // Debug seguro: tenta interpretar as credenciais e reporta o motivo de falha (sem expor conteúdo)
+  try {
+    const raw = getRawCreds();
+    const creds = JSON.parse(raw);
+    out.credsParseOk = true;
+    out.credsClientEmail = creds.client_email ? creds.client_email.replace(/(.{6}).*(@)/, '$1***$2') : null;
+    out.credsHasPrivateKey = Boolean(creds.private_key);
+    out.privateKeyStartOk = (creds.private_key || '').includes('BEGIN PRIVATE KEY');
+  } catch (e) {
+    out.credsParseOk = false;
+    out.credsErro = e.message;
+  }
+
   if (configurado) {
     try {
       const now = new Date();
