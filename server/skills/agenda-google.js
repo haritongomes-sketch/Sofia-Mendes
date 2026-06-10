@@ -116,7 +116,9 @@ async function diagnostico() {
     temServiceAccount: Boolean(process.env.GOOGLE_SERVICE_ACCOUNT_JSON),
     temCalendarId: Boolean(CAL_ID),
     calendarId: CAL_ID || null,
-    timezone: TZ
+    timezone: TZ,
+    // debug seguro: nomes das chaves GOOGLE_* vistas pelo runtime + tamanho do valor (sem expor conteúdo)
+    googleEnvKeys: Object.keys(process.env).filter(k => k.startsWith('GOOGLE')).map(k => `${k}(${(process.env[k] || '').length})`)
   };
 
   if (configurado) {
