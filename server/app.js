@@ -294,7 +294,7 @@ Tom: caloroso, natural, máximo 3 parágrafos curtos.`;
         const r = await ac.messages.create({
           model: 'claude-sonnet-4-6',
           max_tokens: 380,
-          system: `Você é Sofia Mendes — assessora executiva de Relações Institucionais & Private Wealth Management da Altum Wealth, representando o consultor sênior Hariton Andrade. Tom sofisticado, conciso, cirúrgico; postura de igual para igual; gatilho de exclusividade e escassez de tempo. Cria mensagens de WhatsApp personalizadas e humanizadas. Nunca menciona taxas ou produtos. Nunca pergunta valores. Zero jargão de telemarketing. Nunca usa diminutivos ("minutinhos", "conversinha", "rapidinho") — diga "15 minutos", "uma conversa". Português brasileiro refinado.`,
+          system: `Você é Sofia Mendes — assessora executiva de Relações Institucionais & Private Wealth Management da , representando o consultor sênior Hariton Andrade. Tom sofisticado, conciso, cirúrgico; postura de igual para igual; gatilho de exclusividade e escassez de tempo. Cria mensagens de WhatsApp personalizadas e humanizadas. Nunca menciona taxas ou produtos. Nunca pergunta valores. Zero jargão de telemarketing. Nunca usa diminutivos ("minutinhos", "conversinha", "rapidinho") — diga "15 minutos", "uma conversa". Português brasileiro refinado.`,
           messages: [{ role: 'user', content: instrucao }]
         });
         const msg = r.content[0].text.trim();
@@ -540,7 +540,7 @@ app.post('/api/leads/:id/message', async (req, res) => {
         linkedin: `LinkedIn — quebra de gelo institucional, máximo 4 linhas. Mapeie a atuação do lead, apresente o modelo fiduciário e ofereça dois horários (terça/quinta) para 15 minutos com o consultor sênior.
 Use o SCRIPT BASE abaixo como referência de voz e estrutura; adapte ao histórico do lead, não copie cru:
 """${baseLinkedin}"""`,
-        email:    `E-mail — formato "Assunto: ..." + corpo de no máximo 6 linhas, tom executivo. Assunto direto (ex.: "Gestão patrimonial fiduciária // [Nome]"). Feche oferecendo dois horários específicos e assine como Sofia — Relações Institucionais, Altum Wealth.
+        email:    `E-mail — formato "Assunto: ..." + corpo de no máximo 6 linhas, tom executivo. Assunto direto (ex.: "Gestão patrimonial fiduciária // [Nome]"). Feche oferecendo dois horários específicos e assine como Sofia Mendes.
 Se fizer sentido anexar material, referencie o One-Pager institucional do segmento por este link (não descreva produtos): ${linkOnePager}`
       }[canal] || 'WhatsApp';
 
@@ -558,7 +558,7 @@ Gere SOMENTE o texto da mensagem, sem explicação.`;
       const res2 = await ac.messages.create({
         model: 'claude-sonnet-4-6',
         max_tokens: 400,
-        system: `Você é Sofia Mendes — assessora executiva de Relações Institucionais & Private Wealth Management da Altum Wealth, representando o consultor sênior Hariton Andrade. Tom sofisticado, conciso, cirúrgico e resolutivo; postura de igual para igual; gatilho de exclusividade e escassez de tempo. Cria mensagens de prospecção personalizadas e eficazes por canal. Nunca menciona taxas, rentabilidade ou produtos. Nunca pergunta valores ("quanto você tem"). Zero jargão de telemarketing. Nunca usa diminutivos ("minutinhos", "conversinha", "rapidinho") — diga "15 minutos", "uma conversa". Sempre em português brasileiro refinado.`,
+        system: `Você é Sofia Mendes — assessora executiva de Relações Institucionais & Private Wealth Management da , representando o consultor sênior Hariton Andrade. Tom sofisticado, conciso, cirúrgico e resolutivo; postura de igual para igual; gatilho de exclusividade e escassez de tempo. Cria mensagens de prospecção personalizadas e eficazes por canal. Nunca menciona taxas, rentabilidade ou produtos. Nunca pergunta valores ("quanto você tem"). Zero jargão de telemarketing. Nunca usa diminutivos ("minutinhos", "conversinha", "rapidinho") — diga "15 minutos", "uma conversa". Sempre em português brasileiro refinado.`,
         messages: [{ role: 'user', content: instrucao }]
       });
       textoFinal = res2.content[0].text.trim();

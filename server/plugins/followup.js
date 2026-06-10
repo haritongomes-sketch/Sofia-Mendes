@@ -22,7 +22,7 @@ const client = new Anthropic();
 
 // ─── System prompt para follow-ups ───────────────────────────────────────────
 
-const FOLLOWUP_SYSTEM = `Você é Sofia Mendes — assessora executiva de Relações Institucionais & Private Wealth Management da Altum Wealth, representando o consultor sênior Hariton Andrade.
+const FOLLOWUP_SYSTEM = `Você é Sofia Mendes — assessora executiva de Relações Institucionais & Private Wealth Management, representando o consultor sênior Hariton Andrade.
 Postura de igual para igual, sofisticada e cirúrgica; gatilho de exclusividade e escassez de tempo. Nunca pergunta valores ("quanto você tem"); sinaliza padrão Private sem citar números.
 Está fazendo um acompanhamento de alto impacto de uma mensagem anterior que não obteve resposta. Regra do "double-check de valor": quando fizer sentido, traga um insight curto e relevante ao segmento antes de propor o próximo passo.
 
@@ -49,7 +49,7 @@ const CADENCIA_NICHO = {
     t1_hook: 'você estrutura patrimônio complexo para os seus clientes todo dia — e com maestria. Mas o seu próprio? Essa é a pergunta que o Hariton queria te fazer pessoalmente.',
     t2_insight: 'desde a Lei 14.754/2023, a Receita mudou as regras para offshore de pessoa física. Advogados tributaristas que têm estruturas antigas declaradas incorretamente estão pagando mais do que deveriam — ou pior, correndo risco fiscal.',
     t3_urgencia: 'o Hariton tem uma janela disponível essa semana que normalmente não abre para novos diagnósticos. Lembrei de você imediatamente.',
-    t4_despedida: 'entendo que o dia a dia deixa pouco espaço para pensar no próprio patrimônio — você cuida do dos outros com tanta dedicação. Quando o momento for certo, a Altum está aqui.'
+    t4_despedida: 'entendo que o dia a dia deixa pouco espaço para pensar no próprio patrimônio — você cuida do dos outros com tanta dedicação. Quando o momento for certo, o Hariton está aqui.'
   },
   ceo_empresario: {
     t1_hook: 'um empresário que conheço me falou que sempre achou que tinha "tempo para diversificar depois" — até o real desvalorizar 18% em um ano. Me fez pensar em você.',
@@ -67,7 +67,7 @@ const CADENCIA_NICHO = {
     t1_hook: 'um executivo que conheço tinha 80% do patrimônio em ações da empresa onde trabalhava. Quando mudou de emprego, descobriu que não tinha como diversificar sem impacto fiscal enorme. Me lembrei de você.',
     t2_insight: 'executivos com stock options que não têm um plano de diversificação estruturado costumam perder valor quando há vesting, lockup ou mudança de empresa — às vezes 25-30% do valor líquido. O timing de diversificação importa muito mais do que a maioria percebe.',
     t3_urgencia: 'o Hariton está fechando a agenda do próximo mês — tenho apenas 2 janelas para diagnósticos. Pensei em você imediatamente.',
-    t4_despedida: 'sei que executivos sênior raramente têm espaço para pensar no próprio patrimônio — a empresa e o cargo consomem tudo. Quando o momento for certo, a Altum está aqui para isso.'
+    t4_despedida: 'sei que executivos sênior raramente têm espaço para pensar no próprio patrimônio — a empresa e o cargo consomem tudo. Quando o momento for certo, o Hariton está aqui para isso.'
   }
 };
 

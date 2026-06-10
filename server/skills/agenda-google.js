@@ -117,7 +117,7 @@ async function criarEventoReuniao(lead, inicio) {
           `Profissão: ${lead.profissao || '—'}`,
           `Patrimônio: ${lead.patrimonio || '—'}`,
           `WhatsApp: ${lead.whatsapp}`,
-          `Agendado pela Sofia (CRM Altum).`
+          `Agendado pela Sofia (CRM Sofia).`
         ].join('\n'),
         start: { dateTime: new Date(inicio).toISOString(), timeZone: TZ },
         end:   { dateTime: fim.toISOString(),               timeZone: TZ }
