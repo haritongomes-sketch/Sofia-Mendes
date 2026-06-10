@@ -176,7 +176,7 @@ Tom: caloroso, natural, máximo 3 parágrafos curtos.`;
         const r = await ac.messages.create({
           model: 'claude-sonnet-4-6',
           max_tokens: 380,
-          system: `Você é Sofia Mendes, secretária Private Banking sênior da Altum Wealth. Cria mensagens de WhatsApp altamente personalizadas e humanizadas. Nunca menciona taxas ou produtos. Nunca usa diminutivos ("minutinhos", "conversinha", "rapidinho") — público sênior, linguagem adulta e precisa ("15 minutos", "uma conversa"). Português brasileiro refinado.`,
+          system: `Você é Sofia Mendes — assessora executiva de Relações Institucionais & Private Wealth Management da Altum Wealth, representando o consultor sênior Hariton Andrade. Tom sofisticado, conciso, cirúrgico; postura de igual para igual; gatilho de exclusividade e escassez de tempo. Cria mensagens de WhatsApp personalizadas e humanizadas. Nunca menciona taxas ou produtos. Nunca pergunta valores. Zero jargão de telemarketing. Nunca usa diminutivos ("minutinhos", "conversinha", "rapidinho") — diga "15 minutos", "uma conversa". Português brasileiro refinado.`,
           messages: [{ role: 'user', content: instrucao }]
         });
         const msg = r.content[0].text.trim();
@@ -375,25 +375,36 @@ app.post('/api/leads/:id/message', async (req, res) => {
       const Anthropic = require('@anthropic-ai/sdk');
       const ac = new Anthropic();
 
+      // Foco por segmento (alinhado ao posicionamento high ticket)
+      const focoSegmento = {
+        ceo_empresario:        'eficiência de tempo, otimização de estrutura e transição do caixa corporativo (PJ) para a blindagem do patrimônio pessoal (PF)',
+        medico_cirurgiao:      'blindagem patrimonial, falta de tempo para gerir ativos e transição da alta renda física para investimentos estruturados',
+        dentista_especialista: 'blindagem patrimonial e eficiência do patrimônio acumulado, com pouco tempo para gerir',
+        advogado_tributarista: 'sofisticação técnica, segurança jurídica institucional e diversificação internacional / estruturas fiduciárias',
+        engenheiro_executivo:  'diversificação além das ações da empresa e estruturação do patrimônio acumulado'
+      }[lead.nicho] || 'eficiência, proteção e diversificação do patrimônio';
+
       const canalInstrucao = {
-        whatsapp: 'WhatsApp direto — máximo 3 parágrafos curtos, tom caloroso e objetivo.',
-        linkedin: 'LinkedIn — mensagem de conexão profissional, máximo 4 linhas, tom respeitoso e direto.',
-        email:    'E-mail — assunto + corpo, máximo 6 linhas, tom executivo e personalizado.'
+        whatsapp: 'WhatsApp Business — máximo 3 parágrafos curtos, cirúrgico e institucional. Follow-up de alto impacto: referencie o contato anterior e proponha conectar o consultor sênior, oferecendo dois horários específicos (ex.: "terça às 14h ou quinta às 10h").',
+        linkedin: 'LinkedIn — quebra de gelo institucional, máximo 4 linhas. Mapeie a atuação do lead, apresente o modelo fiduciário e ofereça dois horários (terça/quinta) para 15 minutos com o consultor sênior.',
+        email:    'E-mail — formato "Assunto: ..." + corpo de no máximo 6 linhas, tom executivo. Assunto direto (ex.: "Gestão patrimonial fiduciária // [Nome]"). Feche oferecendo dois horários específicos e assine como Sofia — Relações Institucionais, Altum Wealth.'
       }[canal] || 'WhatsApp';
 
       const instrucao = `Gere uma mensagem de ${canal} para ${lead.nome.split(' ')[0]} (${lead.profissao || nichoCtx.descricao}, ${lead.cidade || 'Brasil'}).
-Estágio da conversa: ${estagio} (${userMsgs} mensagens trocadas).
-Patrimônio: ${lead.patrimonio || 'não informado'}.
+Estágio da conversa: ${estagio} (${userMsgs} mensagens trocadas). Patrimônio: ${lead.patrimonio || 'não informado'}.
+Posição: assessora executiva / Relações Institucionais — postura de igual para igual, gatilho de exclusividade e escassez de tempo do lead.
+Foco do segmento (ancore a dor aqui): ${focoSegmento}.
 Canal: ${canalInstrucao}
-Objetivo: retomar ou avançar a conversa em direção ao agendamento dos 15 minutos com Hariton.
+Objetivo: vender o VALOR de uma conversa de 15 minutos com o Hariton (consultor sênior) — não o serviço.
+Filtro de qualificação elegante: NUNCA pergunte valores ("quanto você tem"); sinalize padrão Private sem citar números.
 ${contextoExtra ? `Contexto adicional: ${contextoExtra}` : ''}
-${userMsgs === 0 ? 'É o primeiro contato — apresente-se e gere curiosidade.' : `Já houve ${userMsgs} resposta(s). Continue de onde parou de forma natural.`}
+${userMsgs === 0 ? 'É o primeiro contato — quebra de gelo institucional, apresente-se e gere curiosidade.' : `Já houve ${userMsgs} resposta(s). Continue de onde parou, cirúrgica e sem repetir o que já foi dito.`}
 Gere SOMENTE o texto da mensagem, sem explicação.`;
 
       const res2 = await ac.messages.create({
         model: 'claude-sonnet-4-6',
         max_tokens: 400,
-        system: `Você é Sofia Mendes, secretária Private Banking sênior da Altum Wealth. Cria mensagens de prospecção altamente personalizadas e eficazes para cada canal. Nunca menciona taxas ou produtos. Nunca usa diminutivos ("minutinhos", "conversinha", "rapidinho") — público sênior, linguagem adulta e precisa ("15 minutos", "uma conversa"). Sempre em português brasileiro refinado.`,
+        system: `Você é Sofia Mendes — assessora executiva de Relações Institucionais & Private Wealth Management da Altum Wealth, representando o consultor sênior Hariton Andrade. Tom sofisticado, conciso, cirúrgico e resolutivo; postura de igual para igual; gatilho de exclusividade e escassez de tempo. Cria mensagens de prospecção personalizadas e eficazes por canal. Nunca menciona taxas, rentabilidade ou produtos. Nunca pergunta valores ("quanto você tem"). Zero jargão de telemarketing. Nunca usa diminutivos ("minutinhos", "conversinha", "rapidinho") — diga "15 minutos", "uma conversa". Sempre em português brasileiro refinado.`,
         messages: [{ role: 'user', content: instrucao }]
       });
       textoFinal = res2.content[0].text.trim();
