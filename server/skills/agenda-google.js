@@ -16,10 +16,19 @@ const { proximasJanelas, formatarDataBR, gerarCandidatosBR, BR_TZ } = require('.
 const CAL_ID = process.env.GOOGLE_CALENDAR_ID;
 const TZ      = BR_TZ;
 
+// Aceita a chave em JSON cru (GOOGLE_SERVICE_ACCOUNT_JSON) ou base64
+// (GOOGLE_SERVICE_ACCOUNT_B64) — o base64 evita problemas de quebra de linha no painel.
+function getRawCreds() {
+  const b64 = (process.env.GOOGLE_SERVICE_ACCOUNT_B64 || '').trim();
+  if (b64) return Buffer.from(b64, 'base64').toString('utf8');
+  const json = (process.env.GOOGLE_SERVICE_ACCOUNT_JSON || '').trim();
+  return json || null;
+}
+
 let _calendar = null;
 function getCalendar() {
   if (_calendar) return _calendar;
-  const raw = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
+  const raw = getRawCreds();
   if (!raw || !CAL_ID) return null;
   try {
     const { google } = require('googleapis');
@@ -113,7 +122,7 @@ async function diagnostico() {
   const configurado = Boolean(cal && CAL_ID);
   const out = {
     googleConfigurado: configurado,
-    temServiceAccount: Boolean(process.env.GOOGLE_SERVICE_ACCOUNT_JSON),
+    temServiceAccount: Boolean(getRawCreds()),
     temCalendarId: Boolean(CAL_ID),
     calendarId: CAL_ID || null,
     timezone: TZ,
