@@ -211,23 +211,66 @@ function temInformacoesCompletas(lead) {
   return { patrimonio, profissao, instituicoes, completo: patrimonio && profissao };
 }
 
+// Verifica se o CLIENTE confirmou a própria atividade na conversa.
+// lead.profissao é preenchido pelo operador — não é confirmação do cliente.
+// Só retorna true quando há evidência explícita no histórico de mensagens.
+function nichoConfirmadoPeloCliente(lead) {
+  const msgs = lead.mensagens || [];
+  const userMsgs = msgs.filter(m => m.role === 'user');
+  if (userMsgs.length === 0) return false;
+
+  // Caso 1: Sofia perguntou sobre a atividade e o cliente confirmou na próxima mensagem
+  for (let i = 0; i < msgs.length - 1; i++) {
+    if (msgs[i].role !== 'assistant' || msgs[i + 1]?.role !== 'user') continue;
+    const perguntouAtividade = /atua como|ainda é isso|você (é|trabalha|é médico|é advogado|é dentista|é ceo|é empresário|é engenheiro|é executivo)|sua área|sua atividade|sua profissão|é isso mesmo|isso mesmo\?|é correto\?/i.test(msgs[i].content);
+    if (!perguntouAtividade) continue;
+    const resposta = msgs[i + 1].content.toLowerCase().trim();
+    const confirmou = /^(sim|é|isso|correto|exato|isso mesmo|claro|perfeito|é isso|é sim|exatamente|sou sim|sim,|isso,|é,|verdade|certíssimo|certo|é mesmo|trabalho|atuo)/.test(resposta) ||
+      /\b(sim|é|isso|correto|exato|exatamente|claro|perfeito|é mesmo|trabalho|atuo)\b/.test(resposta);
+    if (confirmou) return true;
+  }
+
+  // Caso 2: o cliente mencionou espontaneamente a própria profissão/atividade
+  const allUserText = userMsgs.map(m => m.content).join(' ').toLowerCase();
+  const keywords = {
+    medico_cirurgiao:      ['sou médico', 'sou médica', 'sou cirurgião', 'sou cirurgiã', 'meu consultório', 'meus plantões', 'minha especialidade', 'sou dr', 'sou dra'],
+    advogado_tributarista: ['sou advogado', 'sou advogada', 'sou tributarista', 'meu escritório de advocacia', 'minha banca', 'atuo no tributário'],
+    ceo_empresario:        ['sou sócio', 'sou ceo', 'sou empresário', 'sou empresária', 'minha empresa', 'dirijo uma empresa', 'sou fundador'],
+    dentista_especialista: ['sou dentista', 'sou cirurgião-dentista', 'meu consultório odontológico', 'atuo na odontologia'],
+    engenheiro_executivo:  ['sou engenheiro', 'sou engenheira', 'sou executivo', 'sou executiva', 'minha diretoria', 'minhas stock options']
+  };
+  const nichoKws = keywords[lead.nicho] || [];
+  return nichoKws.some(k => allUserText.includes(k));
+}
+
 function nichoValidado(lead) {
-  const temHistorico = (lead.mensagens || []).filter(m => m.role === 'user').length >= 1;
-  const temProfissao = lead.profissao && lead.profissao !== '';
-  return temHistorico && temProfissao;
+  return nichoConfirmadoPeloCliente(lead);
 }
 
 // ─── Contexto do lead para Sofia — foco em escuta ─────────────────────────────
 
+// Contexto de mercado universal — usado quando nicho ainda não confirmado
+const CONTEXTO_UNIVERSAL = {
+  descricao: 'profissional de alta renda',
+  dor_central: 'patrimônio construído com esforço mas sem estrutura que o proteja e o faça crescer de forma inteligente',
+  gatilho: 'quem constrói patrimônio sem estrutura adequada costuma perceber a vulnerabilidade no pior momento possível',
+  insight_mercado: 'a diferença entre quem preserva e quem vê o patrimônio erodir nos últimos anos foi, em grande parte, estrutura: diversificação cambial, blindagem jurídica e ausência de conflito de interesse na assessoria',
+  pergunta_qualif_1: 'Você está satisfeito com a forma como o seu patrimônio está estruturado hoje, ou sente que tem alguma coisa que poderia estar funcionando melhor?',
+  pergunta_qualif_2: 'Você tem alguma estrutura de proteção patrimonial montada — holding, PJ, algo nesse sentido — ou está tudo ainda no CPF mesmo?'
+};
+
 function construirContextoLead(lead, mensagemAtual = '') {
-  const nichoCtx    = NICHOS_CONTEXTO[lead.nicho] || NICHOS_CONTEXTO.medico_cirurgiao;
+  const nichoConfirmado = nichoConfirmadoPeloCliente(lead);
+  // Só usa contexto de nicho quando o CLIENTE confirmou a própria atividade
+  const nichoCtx    = (nichoConfirmado && NICHOS_CONTEXTO[lead.nicho]) ? NICHOS_CONTEXTO[lead.nicho] : CONTEXTO_UNIVERSAL;
   const insights    = extrairInsightsRespostas(lead.mensagens || []);
   const info        = temInformacoesCompletas(lead);
-  const validado    = nichoValidado(lead);
   const userMsgs    = (lead.mensagens || []).filter(m => m.role === 'user');
   const engaj       = avaliarEngajamento(mensagemAtual);
   const estagioConv = lead.estagioConv || 'abertura';
   const primeiroNome = lead.nome.split(' ')[0];
+  // profissaoOperador: o que o operador preencheu — é hipótese, não fato confirmado
+  const profissaoOperador = lead.profissao || '';
 
   // ── Instrução de modo baseada no contexto ──────────────────────────────────
 
@@ -241,58 +284,72 @@ Gere curiosidade sobre o que Hariton percebeu no perfil de ${primeiroNome} — a
 Finalize com UMA pergunta genuína sobre o momento atual do patrimônio: aberta, sem julgamento, sem pressão.`;
 
   } else if (userMsgs.length === 1) {
-    instrucaoModo = `FASE 2 — PRESENÇA E CURIOSIDADE (1ª resposta de ${primeiroNome}):
-Você já se apresentou no template — NÃO se reapresente. A conversa já existe.
-PRIMEIRO: Reflita o que ${primeiroNome} disse com suas palavras exatas. Se for monossilábico, mostre genuína curiosidade pelo brevidade: "Entendo — quando você diz X, o que está por trás disso?"
-DEPOIS: Entregue UMA perspectiva relevante ao perfil — algo que o gerente do banco nunca mencionaria.
-FINALIZE com UMA pergunta de aprofundamento baseada no que ele disse — aberta, genuína, sem agenda visível.
-NÃO mencione reunião. NÃO mencione o Hariton ainda como argumento de close.`;
+    const confirmacaoAtividade = profissaoOperador
+      ? `CONFIRME A ATIVIDADE: Em algum momento natural desta mensagem, confirme discretamente a atividade de ${primeiroNome}. Exemplo: "Pelo que chegou até mim, você atua como ${profissaoOperador} — é isso mesmo?" ou encaixe de forma ainda mais natural na conversa. Isso é OBRIGATÓRIO nesta fase — sem essa confirmação você não pode usar nenhum contexto específico do perfil.`
+      : `DESCUBRA A ATIVIDADE: Pergunte de forma natural sobre a área de atuação de ${primeiroNome}. Exemplo: "Me conta — em que área você atua?" ou similar. Isso é OBRIGATÓRIO — sem essa informação você não pode avançar.`;
+    instrucaoModo = `FASE 2 — PRESENÇA + CONFIRMAÇÃO DE ATIVIDADE (1ª resposta de ${primeiroNome}):
+Você já se apresentou — NÃO se reapresente. A conversa já existe.
+PRIMEIRO: Reflita o que ${primeiroNome} disse com suas palavras. Se for monossilábico, mostre curiosidade genuína pelo brevidade.
+DEPOIS: Use apenas contexto UNIVERSAL nesta mensagem — nenhum dado específico de nicho ainda, pois a atividade não foi confirmada.
+${confirmacaoAtividade}
+NÃO mencione reunião. NÃO use linguagem específica de nenhuma profissão até ter confirmação do cliente.`;
 
-  } else if (userMsgs.length === 2) {
-    instrucaoModo = `FASE 3 — VALOR E CONEXÃO (2ª troca com ${primeiroNome}):
-Você já tem contexto. Hora de mostrar perspectiva sênior.
-PRIMEIRO: Conecte os pontos da conversa — mostre que você acompanhou a narrativa, não apenas a última mensagem.
-DEPOIS: Solte UM insight de mercado concreto relevante ao perfil: "${nichoCtx.insight_mercado}"
-Conecte esse insight ao que ${primeiroNome} disse — faça parecer conclusão natural, não pitch.
-FINALIZE com UMA pergunta que aprofunda a situação específica dele.
-NÃO proponha reunião ainda — a conexão ainda está sendo construída.`;
+  } else if (userMsgs.length === 2 && !nichoConfirmado) {
+    instrucaoModo = `FASE 2b — ATIVIDADE AINDA NÃO CONFIRMADA (2ª troca com ${primeiroNome}):
+${primeiroNome} ainda não confirmou a atividade. Continue com contexto UNIVERSAL.
+PRIMEIRO: Reflita o que ele disse.
+DEPOIS: Tente confirmar a atividade de forma ainda mais natural: "Me conta um pouco mais sobre o que você faz — isso me ajuda a entender melhor o contexto."
+USE APENAS: contexto universal, dores gerais de patrimônio, sem menção de nicho, profissão ou segmento específico.`;
+
+  } else if (userMsgs.length === 2 && nichoConfirmado) {
+    instrucaoModo = `FASE 3 — VALOR COM NICHO CONFIRMADO (2ª troca com ${primeiroNome}):
+Atividade confirmada: ${nichoCtx.descricao}. Agora você pode usar contexto específico.
+PRIMEIRO: Conecte os pontos da conversa — mostre que você acompanhou a narrativa completa.
+DEPOIS: Solte UM insight de mercado concreto e específico para o perfil: "${nichoCtx.insight_mercado}"
+Conecte ao que ${primeiroNome} disse — faça parecer conclusão natural, não pitch.
+FINALIZE com UMA pergunta que aprofunda o cenário dele.
+NÃO proponha reunião ainda.`;
 
   } else if (engaj === 'frio') {
     instrucaoModo = `MODO CLIENTE FRIO — MUDE O ÂNGULO, NÃO FORCE:
 ${primeiroNome} está hesitante. NÃO repita o mesmo argumento nem insista na reunião.
 Escolha UMA destas estratégias:
-(a) Curiosidade específica do nicho: "Posso compartilhar algo que aconteceu com alguém exatamente no seu perfil recentemente?"
-(b) Retirada elegante e não-invasiva: "Sem nenhuma pressa — fica à vontade. Só queria deixar em aberto."
-(c) Insight de mercado: solte um dado relevante para o nicho sem pedir nada em troca.
-Tom: leve, sem pressão. UMA pergunta fechada e suave no final, ou nenhuma.`;
+(a) ${nichoConfirmado ? `Curiosidade de nicho confirmado: "Posso compartilhar algo que aconteceu com alguém exatamente na sua área recentemente?"` : `Curiosidade universal: "Posso compartilhar algo que tem acontecido com clientes do perfil que trabalhamos?"`}
+(b) Retirada elegante: "Sem nenhuma pressa — fica à vontade. Só queria deixar em aberto."
+(c) ${nichoConfirmado ? `Insight de nicho: ${nichoCtx.insight_mercado}` : `Insight universal: ${CONTEXTO_UNIVERSAL.insight_mercado}`}
+Tom: leve, sem pressão. UMA pergunta fechada e suave no final, ou nenhuma.
+${!nichoConfirmado ? 'NÃO use linguagem específica de nenhuma profissão — atividade ainda não confirmada.' : ''}`;
 
   } else if (engaj === 'baixo' && userMsgs.length >= 3) {
+    const insightUsar = nichoConfirmado ? nichoCtx.insight_mercado : CONTEXTO_UNIVERSAL.insight_mercado;
     instrucaoModo = `MODO BAIXO ENGAJAMENTO — CURIOSIDADE ESPECÍFICA (${userMsgs.length} trocas):
 ${primeiroNome} responde mas com pouco. NÃO use argumento genérico nem repita a proposta de reunião.
-Estratégia: solte um insight específico do nicho e conecte diretamente ao que ${primeiroNome} mencionou antes.
-Mostre que você LEMBROU o que ele disse e tem algo genuinamente útil a acrescentar.
+${nichoConfirmado ? `Atividade confirmada — use contexto de nicho: "${insightUsar}"` : `Atividade ainda NÃO confirmada — use contexto universal: "${insightUsar}"`}
+Conecte diretamente ao que ${primeiroNome} mencionou antes. Mostre que você LEMBROU o que ele disse.
 Pergunta final: "Isso ressoa com o que você tem visto?" ou "Faz sentido pensar nisso no seu caso?"`;
 
   } else if (userMsgs.length < 3) {
-    const pergunta = userMsgs.length <= 2 ? nichoCtx.pergunta_qualif_1 : nichoCtx.pergunta_qualif_2;
-    instrucaoModo = `FASE 3 — APROFUNDAMENTO (${userMsgs.length} trocas — ainda construindo conexão):
-Nicho provável: ${nichoCtx.descricao}. Mas construa o contexto pela conversa, não pelo script.
-PRIMEIRO: Conecte o que ${primeiroNome} disse às implicações mais amplas — mostre perspectiva sênior.
+    const pergunta = nichoConfirmado ? nichoCtx.pergunta_qualif_1 : CONTEXTO_UNIVERSAL.pergunta_qualif_1;
+    instrucaoModo = `FASE 3 — APROFUNDAMENTO (${userMsgs.length} trocas):
+${nichoConfirmado ? `Nicho confirmado: ${nichoCtx.descricao}. Use contexto específico.` : `Atividade NÃO confirmada. Use apenas contexto UNIVERSAL — sem linguagem de nicho.`}
+PRIMEIRO: Conecte o que ${primeiroNome} disse às implicações mais amplas.
 DEPOIS: Incorpore esta questão de forma natural: "${pergunta}"
-NÃO proponha reunião ainda — a conexão não está madura o suficiente.`;
+NÃO proponha reunião ainda.`;
 
   } else if (userMsgs.length >= 3 && info.completo) {
-    instrucaoModo = `FASE 4 → 5 — RECONHECIMENTO E CLOSE NATURAL (${userMsgs.length} trocas — pronto para avançar):
-Contexto suficiente. Use o que ${primeiroNome} REALMENTE disse — nada genérico.
-1. Reconheça o padrão específico DELE: "Com o que você me contou — [referência exata ao que ele disse] — percebo que..."
-2. Nomeie o que ele já sente mas talvez ainda não nomeou: "${nichoCtx.gatilho}"
-3. Close natural: "É exatamente esse cenário que o Hariton diagnóstica em 15 minutos — rápido, sem compromisso, só para ter clareza. Tenho [dia] ou [dia] — qual funciona melhor?"`;
+    const gatilhoUsar = nichoConfirmado ? nichoCtx.gatilho : CONTEXTO_UNIVERSAL.gatilho;
+    instrucaoModo = `FASE 4 → 5 — RECONHECIMENTO E CLOSE NATURAL (${userMsgs.length} trocas):
+${nichoConfirmado ? `Nicho confirmado: ${nichoCtx.descricao}. Use contexto específico.` : `Atividade NÃO confirmada. Use contexto UNIVERSAL — sem linguagem de nicho específico.`}
+1. Reconheça o padrão específico DELE usando o que ele REALMENTE disse: "Com o que você me contou — [referência exata] — percebo que..."
+2. Nomeie o que ele já sente: "${gatilhoUsar}"
+3. Close: "É exatamente esse cenário que o Hariton diagnóstica em 15 minutos — rápido, sem compromisso, só para ter clareza. Tenho [dia] ou [dia] — qual funciona melhor?"`;
 
   } else if (userMsgs.length >= 3 && !info.completo) {
+    const gatilhoUsar = nichoConfirmado ? nichoCtx.gatilho : CONTEXTO_UNIVERSAL.gatilho;
     instrucaoModo = `FASE 4 — CLOSE COM CONTEXTO PARCIAL (${userMsgs.length} trocas):
-Você tem contexto suficiente mesmo sem todos os dados. Use o que tem.
-Reconheça o padrão: "${nichoCtx.gatilho}"
-Avance para o close: "É exatamente esse cenário que o Hariton resolve em 15 minutos. Tenho [dia] ou [dia] — qual funciona melhor?"
+${nichoConfirmado ? `Nicho confirmado: ${nichoCtx.descricao}.` : `Atividade NÃO confirmada. Use contexto UNIVERSAL.`}
+Reconheça o padrão: "${gatilhoUsar}"
+Close: "É exatamente esse cenário que o Hariton resolve em 15 minutos. Tenho [dia] ou [dia] — qual funciona melhor?"
 A qualificação completa acontece no diagnóstico — não bloqueie o close por falta de dados.`;
 
   } else if (estagioConv === 'agendamento') {
@@ -319,11 +376,12 @@ ${userMsgs.length >= 3 ? 'Você pode propor a reunião se o contexto estiver mad
     : '';
 
   return `[PERFIL DE ${primeiroNome.toUpperCase()}]
-Nome: ${lead.nome} | Profissão: ${lead.profissao || 'não informada'} | Cidade: ${lead.cidade || 'não informada'} | Estado: ${lead.estado || ''}
+Nome: ${lead.nome} | Profissão (operador): ${profissaoOperador || 'não informada'} | Cidade: ${lead.cidade || 'não informada'} | Estado: ${lead.estado || ''}
 Patrimônio declarado: ${lead.patrimonio || 'não informado'} | Perfil de risco: ${lead.perfil}
 Instituições mencionadas: ${lead.instituicoes !== '[]' ? lead.instituicoes : 'nenhuma ainda'}
-Nicho: ${nichoCtx.descricao} | Dor central identificada: ${nichoCtx.dor_central}
-Estágio da conversa: ${estagioConv} | Mensagens trocadas: ${userMsgs.length} | Engajamento atual: ${engaj}${insightsStr}
+Atividade confirmada pelo cliente: ${nichoConfirmado ? `SIM — ${nichoCtx.descricao}` : 'NÃO — use apenas contexto universal até o cliente confirmar'}
+Dor central (${nichoConfirmado ? 'nicho confirmado' : 'universal'}): ${nichoCtx.dor_central}
+Estágio da conversa: ${estagioConv} | Trocas com o cliente: ${userMsgs.length} | Engajamento atual: ${engaj}${insightsStr}
 
 ${instrucaoModo}${instrEngajamento}`;
 }
