@@ -38,7 +38,9 @@ app.use(cors({
     if (/^https:\/\/crm-ui[^.]*\.vercel\.app$/.test(origin)) return cb(null, true);
     // permite private-crm* também (backend self-calls)
     if (/^https:\/\/private-crm[^.]*\.vercel\.app$/.test(origin)) return cb(null, true);
-    cb(new Error(`CORS bloqueado: ${origin}`));
+    // Origem desconhecida (ex.: webhook Z-API servidor-a-servidor): NÃO lança erro —
+    // apenas não envia o header de CORS. Lançar Error transformava webhooks em 500.
+    return cb(null, false);
   },
   credentials: true,
 }));
