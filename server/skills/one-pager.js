@@ -144,17 +144,17 @@ function htmlOnePager(seg) {
   .brand { display: flex; align-items: baseline; gap: 12px; }
   .brand .mark {
     font-family: Georgia, "Times New Roman", serif;
-    font-size: 30px; font-weight: 700; letter-spacing: .04em;
+    font-size: 30px; font-weight: 700; letter-spacing: .04em; color: #fff;
   }
-  .brand .mark span { color: var(--gold-soft); }
+  .brand .mark em { color: var(--gold-soft); font-style: italic; font-weight: 400; }
   .brand .sub {
     font-size: 10px; letter-spacing: .32em; text-transform: uppercase;
     color: #aeb8c6;
   }
   header .tagline {
-    margin-top: 12px;
-    font-family: Georgia, serif; font-size: 16px; font-weight: 400;
-    color: #e8ddca; font-style: italic;
+    margin-top: 10px;
+    font-family: Georgia, serif; font-size: 14px; font-weight: 400;
+    color: #aeb8c6; font-style: italic; letter-spacing: .01em;
   }
   /* Corpo */
   main { padding: 30px 40px 12px; flex: 1; }
@@ -223,10 +223,10 @@ function htmlOnePager(seg) {
   <div class="page">
     <header>
       <div class="brand">
-        <span class="mark">CRM <em style="font-style:italic;font-weight:400">Private Wealth</em></span>
-        <span class="sub">Gestão Patrimonial Independente</span>
+        <span class="mark">CRM <em>Private Wealth</em></span>
+        <span class="sub">Assessoria Fiduciária Independente</span>
       </div>
-      <p class="tagline">Gestão patrimonial fiduciária e independente.</p>
+      <p class="tagline">Sem conflito de interesse. Sem comissão de produto.</p>
     </header>
 
     <main>

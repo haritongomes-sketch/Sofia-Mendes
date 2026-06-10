@@ -27,8 +27,8 @@ function htmlImportTool() {
   header { background:var(--navy); color:#fff; border-radius:10px 10px 0 0; padding:22px 26px; position:relative; }
   header::after { content:""; position:absolute; left:0; bottom:0; width:100%; height:3px;
     background:linear-gradient(90deg,var(--gold) 0%,var(--gold-soft) 60%,transparent 100%); }
-  header .mark { font-family:Georgia,serif; font-size:22px; font-weight:700; letter-spacing:.03em; }
-  header .mark span { color:var(--gold-soft); }
+  header .mark { font-family:Georgia,serif; font-size:22px; font-weight:700; letter-spacing:.03em; color:#fff; }
+  header .mark em { color:var(--gold-soft); font-style:italic; font-weight:400; }
   header .sub { font-size:11px; letter-spacing:.2em; text-transform:uppercase; color:#aeb8c6; margin-top:4px; }
   .card { background:#fff; border:1px solid var(--line); border-top:none; padding:22px 26px; }
   .card.last { border-radius:0 0 10px 10px; }
@@ -74,7 +74,7 @@ function htmlImportTool() {
 <body>
 <div class="wrap">
   <header>
-    <div class="mark">CRM <em style="font-style:italic;font-weight:400">Private Wealth</em></div>
+    <div class="mark">CRM <em>Private Wealth</em></div>
     <div class="sub">Listas de Leads — Fila da Sofia</div>
   </header>
 
