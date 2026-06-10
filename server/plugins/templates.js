@@ -21,41 +21,41 @@ const TEMPLATES = {
       // Variante A — Ângulo: movimentações de mercado (SCRIPT VALIDADO 1)
       id: 'u_a',
       texto: (nome, cidade) =>
-        `Olá, ${nome}! Me chamo Sofia Mendes, sou do time de Private Banking, aqui de São Paulo. Chego até você com uma indicação de alguém que admira muito o que você construiu — e por isso quis nos conectar.
+        `Olá, ${nome}! Sou a Sofia Mendes, assistente do Hariton Andrade — planejador financeiro e advisor independente, modelo fee-based (ele não vende produto nem recebe comissão).
 
-Sei que seu tempo é valioso, então vou ser direta: estamos trabalhando com um perfil muito específico de pessoas${cidade ? ` em ${cidade}` : ''} que, como você, chegaram a um patrimônio expressivo por conta própria. Há algumas movimentações no mercado que têm gerado oportunidades pouco convencionais para esse perfil — e achei que faria sentido você saber.
+Chego até você por indicação. O Hariton trabalha com pessoas${cidade ? ` em ${cidade}` : ''} que construíram um patrimônio relevante e querem organizá-lo melhor: proteção, diversificação internacional e eficiência tributária — com uma visão independente, fora do conflito de interesse dos bancos.
 
-Teria 15 minutos essa semana para uma conversa rápida? Sem compromisso nenhum, só para eu entender um pouco mais do seu momento e ver se faz sentido para você. 🙏`
+A proposta é direta: 15 minutos por vídeo com ele, um diagnóstico do seu cenário, sem compromisso e sem pitch. Faz sentido conversar essa semana?`
     },
     {
       // Variante B — Ângulo: crescimento inteligente e proteção (SCRIPT VALIDADO 2)
       id: 'u_b',
       texto: (nome) =>
-        `Olá, ${nome}! Me chamo Sofia Mendes, sou do time Private Banking. Seu nome chegou até mim por meio de uma indicação, e fiquei curiosa para conhecer um pouco mais sobre seus planos.
+        `Olá, ${nome}! Sou a Sofia Mendes, assistente do Hariton Andrade, planejador financeiro independente (fee-based, sem venda de produto). Seu nome chegou por indicação.
 
-Trabalho com pessoas que, assim como você, construíram um patrimônio relevante com muito esforço — e que agora querem garantir que ele continue crescendo de forma inteligente e protegida, independentemente do que aconteça no cenário econômico.
+O Hariton ajuda quem construiu um patrimônio relevante a planejá-lo melhor — proteger o que já tem, diversificar e pagar menos imposto de forma legal — sem os conflitos de interesse de banco ou corretora.
 
-Teria 15 minutos esta semana para uma conversa rápida? Sem compromisso, apenas para entender o seu momento e ver se faz sentido seguirmos juntos. 😊`
+Queria te propor uma conversa de 15 minutos com ele, por vídeo: um diagnóstico do seu momento, sem compromisso. Você teria essa semana?`
     },
     {
       // Variante C — Ângulo: próximo passo (diversificação / segunda opinião)
       id: 'u_c',
       texto: (nome, cidade) =>
-        `Olá, ${nome}! Aqui é a Sofia Mendes, do time de Private Banking. Seu nome chegou até mim por uma indicação de alguém que te conhece bem — e me deu curiosidade entender melhor o seu momento.
+        `Olá, ${nome}! Aqui é a Sofia Mendes, assistente do Hariton Andrade — planejador financeiro e advisor independente.
 
-Trabalho com um grupo bastante específico de pessoas${cidade ? ` em ${cidade}` : ''} que construíram patrimônio relevante e estão pensando no próximo passo — seja proteção, diversificação ou simplesmente uma segunda opinião independente sobre o que já têm.
+Trabalhamos com pessoas${cidade ? ` em ${cidade}` : ''} que já têm um patrimônio relevante e querem um plano claro para ele: proteção, diversificação e sucessão. Como o Hariton é remunerado pelo cliente (fee-based), a orientação é isenta — sem produto sendo empurrado.
 
-Teria 15 minutos essa semana para uma conversa rápida? Sem nenhum compromisso — só para entender o seu cenário atual. 🙏`
+A ideia é objetiva: 15 minutos por vídeo com ele, um diagnóstico do seu cenário, sem compromisso. Funciona conversar essa semana?`
     },
     {
       // Variante D — Ângulo: perfil seletivo + advisory independente
       id: 'u_d',
       texto: (nome) =>
-        `Olá, ${nome}! Me chamo Sofia Mendes, sou do time de Private Banking, de São Paulo. Recebi seu contato por indicação e — sendo direta — não trabalhamos com todos os perfis, mas o seu chamou a atenção do Hariton Andrade.
+        `Olá, ${nome}! Sou a Sofia Mendes, assistente do Hariton Andrade. Vou ser direta: ele é planejador financeiro e advisor independente (fee-based, sem comissão) e atende poucos perfis por vez — o seu chegou por indicação e faz sentido para o trabalho dele.
 
-Ele é advisor independente, sem comissão de produto. Trabalha com quem construiu patrimônio por conta própria e quer uma visão honesta sobre o cenário — sem os conflitos de interesse dos grandes bancos.
+O Hariton cuida do planejamento patrimonial completo: proteção, diversificação internacional, eficiência tributária e sucessão — com independência total dos bancos.
 
-Teria 15 minutos essa semana para uma conversa rápida? Nada de pitch, só para eu entender o seu momento atual. 😊`
+Proposta clara: 15 minutos por vídeo com ele, um diagnóstico do seu cenário, sem compromisso e sem pitch. Tem disponibilidade essa semana?`
     }
   ],
 

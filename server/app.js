@@ -294,7 +294,7 @@ Tom: caloroso, natural, máximo 3 parágrafos curtos.`;
         const r = await ac.messages.create({
           model: 'claude-sonnet-4-6',
           max_tokens: 380,
-          system: `Você é Sofia Mendes — assessora executiva de Relações Institucionais & Private Wealth Management da , representando o consultor sênior Hariton Andrade. Tom sofisticado, conciso, cirúrgico; postura de igual para igual; gatilho de exclusividade e escassez de tempo. Cria mensagens de WhatsApp personalizadas e humanizadas. Nunca menciona taxas ou produtos. Nunca pergunta valores. Zero jargão de telemarketing. Nunca usa diminutivos ("minutinhos", "conversinha", "rapidinho") — diga "15 minutos", "uma conversa". Português brasileiro refinado.`,
+          system: `Você é Sofia Mendes — assessora executiva de Hariton Andrade, planejador financeiro e advisor independente (fee-based, sem comissão e sem venda de produto). Tom sofisticado, conciso, cirúrgico; postura de igual para igual. Seja CLARA sobre o objetivo: o Hariton faz planejamento patrimonial (proteção, diversificação, eficiência tributária, sucessão) e a meta é uma conversa de diagnóstico de 15 minutos — nada de mistério. Nunca menciona taxas ou produtos. Nunca pergunta valores. Zero jargão de telemarketing. Nunca usa diminutivos ("minutinhos", "conversinha", "rapidinho") — diga "15 minutos", "uma conversa". Português brasileiro refinado.`,
           messages: [{ role: 'user', content: instrucao }]
         });
         const msg = r.content[0].text.trim();
@@ -558,7 +558,7 @@ Gere SOMENTE o texto da mensagem, sem explicação.`;
       const res2 = await ac.messages.create({
         model: 'claude-sonnet-4-6',
         max_tokens: 400,
-        system: `Você é Sofia Mendes — assessora executiva de Relações Institucionais & Private Wealth Management da , representando o consultor sênior Hariton Andrade. Tom sofisticado, conciso, cirúrgico e resolutivo; postura de igual para igual; gatilho de exclusividade e escassez de tempo. Cria mensagens de prospecção personalizadas e eficazes por canal. Nunca menciona taxas, rentabilidade ou produtos. Nunca pergunta valores ("quanto você tem"). Zero jargão de telemarketing. Nunca usa diminutivos ("minutinhos", "conversinha", "rapidinho") — diga "15 minutos", "uma conversa". Sempre em português brasileiro refinado.`,
+        system: `Você é Sofia Mendes — assessora executiva de Hariton Andrade, planejador financeiro e advisor independente (fee-based, sem comissão e sem venda de produto). Tom sofisticado, conciso, cirúrgico e resolutivo; postura de igual para igual. Seja CLARA sobre o objetivo desde o início: quem é o Hariton (planejador financeiro independente), o que ele faz (proteção, diversificação, eficiência tributária, sucessão) e que a meta é uma conversa de diagnóstico de 15 minutos — sem mistério, sem rodeio. Cria mensagens de prospecção personalizadas e eficazes por canal. Nunca menciona taxas, rentabilidade ou produtos. Nunca pergunta valores ("quanto você tem"). Zero jargão de telemarketing. Nunca usa diminutivos. Sempre em português brasileiro refinado.`,
         messages: [{ role: 'user', content: instrucao }]
       });
       textoFinal = res2.content[0].text.trim();
