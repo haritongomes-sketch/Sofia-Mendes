@@ -11,9 +11,23 @@ function getPrisma() {
   return prisma;
 }
 
+// Salva a mensagem do lead com o zapiMessageId (trava de deduplicação).
+// Retorna false se for duplicata (violação de unicidade) — reentrega/corrida do webhook.
+async function salvarMsgUsuario(db, leadId, content, zapiMessageId) {
+  try {
+    await db.mensagem.create({
+      data: { leadId, role: 'user', content, zapiMessageId: zapiMessageId || undefined }
+    });
+    return true;
+  } catch (err) {
+    if (err.code === 'P2002') return false; // já existe mensagem com este zapiMessageId
+    throw err;
+  }
+}
+
 const sofia = require('./sofia');
 const { extrairDadosConversa } = require('./sofia');
-const { sendWhatsApp, extractPhoneFromWebhook, extractTextFromWebhook, isIncomingMessage } = require('./zapi');
+const { sendWhatsApp, extractPhoneFromWebhook, extractTextFromWebhook, extractMessageId, isIncomingMessage } = require('./zapi');
 const { proximasDuasJanelas, criarEventoReuniao } = require('./skills/agenda-google');
 const { notificarReuniaoConfirmada } = require('./plugins/notificacao');
 const { calcularScore } = require('./plugins/scoring');
@@ -213,8 +227,9 @@ app.post('/api/webhook/whatsapp', async (req, res) => {
   // Mensagens que não precisam de processamento respondem imediatamente
   if (!isIncomingMessage(req.body)) return res.json({ ok: true, skip: true });
 
-  const phone   = extractPhoneFromWebhook(req.body);
-  const userMsg = extractTextFromWebhook(req.body);
+  const phone     = extractPhoneFromWebhook(req.body);
+  const userMsg   = extractTextFromWebhook(req.body);
+  const messageId = extractMessageId(req.body);
   if (!phone || !userMsg) return res.json({ ok: true, skip: 'no_data' });
 
   const db = getPrisma();
@@ -229,23 +244,49 @@ app.post('/api/webhook/whatsapp', async (req, res) => {
     const lead = leads.find(l => l.whatsapp.replace(/\D/g, '').slice(-8) === phoneSuffix);
     if (!lead) return res.json({ ok: true, skip: 'lead_not_found' });
 
+    // ── Deduplicação: o Z-API reenvia o webhook quando a resposta demora.
+    // Se já processamos esta mensagem, ignoramos para a Sofia não responder 2x.
+    if (messageId) {
+      const jaProcessada = await db.mensagem.findFirst({ where: { zapiMessageId: messageId } });
+      if (jaProcessada) {
+        console.log(`[Webhook] Duplicata ignorada (messageId) → ${lead.nome}`);
+        return res.json({ ok: true, skip: 'duplicate' });
+      }
+    } else {
+      // Sem messageId: dedup leve por conteúdo idêntico nos últimos 30s
+      const ha30s = new Date(Date.now() - 30 * 1000);
+      const recente = await db.mensagem.findFirst({
+        where: { leadId: lead.id, role: 'user', content: userMsg, timestamp: { gte: ha30s } }
+      });
+      if (recente) {
+        console.log(`[Webhook] Duplicata ignorada (conteúdo/30s) → ${lead.nome}`);
+        return res.json({ ok: true, skip: 'duplicate_soft' });
+      }
+    }
+
     // Cessar contato: apenas registra, não responde
     if (lead.cessarContato) {
-      await db.mensagem.create({ data: { leadId: lead.id, role: 'user', content: userMsg } });
+      await salvarMsgUsuario(db, lead.id, userMsg, messageId);
       return res.json({ ok: true, skip: 'cessar_contato' });
     }
 
     // Transbordo manual: IA pausada (Hariton assumiu). Registra a mensagem do lead
     // para o histórico do CRM, mas a Sofia NÃO responde até a IA ser reativada.
     if (lead.pausarIA) {
-      await db.mensagem.create({ data: { leadId: lead.id, role: 'user', content: userMsg } });
+      await salvarMsgUsuario(db, lead.id, userMsg, messageId);
       await db.lead.update({ where: { id: lead.id }, data: { ultimaInteracao: new Date() } });
       console.log(`[Webhook] IA pausada (atendimento humano) → ${lead.nome}`);
       return res.json({ ok: true, skip: 'ia_pausada' });
     }
 
     console.log(`[Webhook] ${lead.nome}: "${userMsg.slice(0, 60)}"`);
-    await db.mensagem.create({ data: { leadId: lead.id, role: 'user', content: userMsg } });
+    // Trava de corrida: se a mesma mensagem chegar simultaneamente, a 2ª falha aqui
+    // (zapiMessageId é @unique) e abortamos antes de a Sofia responder.
+    const salvou = await salvarMsgUsuario(db, lead.id, userMsg, messageId);
+    if (!salvou) {
+      console.log(`[Webhook] Duplicata ignorada (corrida) → ${lead.nome}`);
+      return res.json({ ok: true, skip: 'duplicate_race' });
+    }
 
     // Sofia gera resposta + extração de dados em paralelo
     const [sofiaResult, dadosExtraidos] = await Promise.all([

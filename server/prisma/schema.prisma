@@ -43,12 +43,15 @@ model Lead {
 }
 
 model Mensagem {
-  id        String   @id @default(cuid())
-  leadId    String
-  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  role      String
-  content   String
-  timestamp DateTime @default(now())
+  id            String   @id @default(cuid())
+  leadId        String
+  lead          Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  role          String
+  content       String
+  zapiMessageId String?
+  timestamp     DateTime @default(now())
+
+  @@index([zapiMessageId])
 }
 
 model Reuniao {

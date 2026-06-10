@@ -32,6 +32,17 @@ function extractPhoneFromWebhook(body) {
   return (body.phone || body.participantPhone || body.sender || body.from || '').toString().replace(/\D/g, '');
 }
 
+// ID único da mensagem no Z-API — usado para deduplicar reentregas do webhook.
+function extractMessageId(body) {
+  return (
+    body.messageId ||
+    body.id ||
+    body.message?.id ||
+    body.referenceMessageId ||
+    null
+  );
+}
+
 // Texto pode chegar em vários formatos dependendo da versão/tipo de mensagem do Z-API
 function extractTextFromWebhook(body) {
   return (
@@ -65,4 +76,4 @@ function isIncomingMessage(body) {
   return Boolean(extractTextFromWebhook(body));
 }
 
-module.exports = { sendWhatsApp, extractPhoneFromWebhook, extractTextFromWebhook, isIncomingMessage };
+module.exports = { sendWhatsApp, extractPhoneFromWebhook, extractTextFromWebhook, extractMessageId, isIncomingMessage };
