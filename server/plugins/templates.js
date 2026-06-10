@@ -1,129 +1,176 @@
 /**
- * Templates de abertura — Humanizados, sem assumir nicho
- * Sofia se apresenta e gera curiosidade. O nicho é validado APÓS a resposta do cliente.
- * Teste A/B: após 20 envios por variante, usa a de maior taxa de resposta.
+ * Templates de abertura — Scripts Validados Private Banking
+ *
+ * Estrutura validada (4 elementos obrigatórios):
+ *  1. "Olá, [nome]! Tudo bem? Me chamo Sofia Mendes, sou do time de Private Banking..."
+ *  2. Gancho de INDICAÇÃO — prova social imediata
+ *  3. Espelhamento do perfil + ângulo de valor (mercado / proteção / oportunidade)
+ *  4. CTA: "15 minutos" + "Sem compromisso" + emoji
+ *
+ * 4 variações universais (A/B/C/D) + variações por nicho quando profissão já confirmada.
+ * Rotação automática → teste A/B após 20 envios por variante.
  */
 
 const TEMPLATES = {
-  // ── Templates universais — não assumem profissão ───────────────────────────
+
+  // ── Templates universais ──────────────────────────────────────────────────────
+  // Usados sempre na abertura (profissão não confirmada ainda)
+
   universal: [
     {
+      // Variante A — Ângulo: movimentações de mercado (SCRIPT VALIDADO 1)
       id: 'u_a',
-      texto: (nome) => `Olá ${nome}! Tudo bem?
+      texto: (nome, cidade) =>
+        `Olá, ${nome}! Tudo bem? Me chamo Sofia Mendes, sou do time de Private Banking da Altum Wealth, aqui de São Paulo. Chego até você com uma indicação de alguém que admira muito o que você construiu — e por isso quis nos conectar.
 
-Sou a Sofia, parceira do Hariton Gomes aqui na Altum Wealth. Ele me pediu para entrar em contato com você — trabalha com advisory independente, sem os conflitos dos grandes bancos, e costuma abrir perspectivas que a maioria das pessoas nunca ouviu do gerente.
+Sei que seu tempo é valioso, então vou ser direta: estamos trabalhando com um perfil muito específico de pessoas${cidade ? ` em ${cidade}` : ''} que, como você, chegaram a um patrimônio expressivo por conta própria. Há algumas movimentações no mercado que têm gerado oportunidades pouco convencionais para esse perfil — e achei que faria sentido você saber.
 
-Como você está pensando o seu patrimônio hoje? Está satisfeito com o que tem ou sentindo que poderia estar funcionando melhor?`
+Teria 15 minutos essa semana para uma conversa rápida? Sem compromisso nenhum, só para eu entender um pouco mais do seu momento e ver se faz sentido para você. 🙏`
     },
     {
+      // Variante B — Ângulo: crescimento inteligente e proteção (SCRIPT VALIDADO 2)
       id: 'u_b',
-      texto: (nome) => `Oi ${nome}! Como vai?
+      texto: (nome) =>
+        `Olá, ${nome}! Tudo bem? Me chamo Sofia Mendes, sou do time Private Banking da Altum Wealth. Seu nome chegou até mim por meio de uma indicação, e fiquei curiosa para conhecer um pouco mais sobre seus planos.
 
-Sou Sofia, da Altum Wealth — trabalho com o Hariton Gomes, um advisor independente que atende quem construiu patrimônio relevante e quer que ele trabalhe de verdade, sem os conflitos de interesse dos bancos tradicionais.
+Trabalho com pessoas que, assim como você, construíram um patrimônio relevante com muito esforço — e que agora querem garantir que ele continue crescendo de forma inteligente e protegida, independentemente do que aconteça no cenário econômico.
 
-O Hariton me pediu para falar com você especificamente. Você tem 15 minutinhos para uma conversa diagnóstica com ele esta semana?`
+Teria 15 minutos esta semana para uma conversa rápida? Sem compromisso, apenas para entender o seu momento e ver se faz sentido seguirmos juntos. 😊`
     },
     {
+      // Variante C — Ângulo: próximo passo (diversificação / segunda opinião)
       id: 'u_c',
-      texto: (nome) => `Oi ${nome}! Aqui é a Sofia, da Altum Wealth.
+      texto: (nome, cidade) =>
+        `Olá, ${nome}! Tudo bem? Aqui é a Sofia Mendes, do time de Private Banking da Altum Wealth. Seu nome chegou até mim por uma indicação de alguém que te conhece bem — e me deu curiosidade entender melhor o seu momento.
 
-Trabalhamos com um modelo diferente dos bancos: advisory 100% fee-based, sem comissão de produto — o que significa que o Hariton só recomenda o que é bom para você, não o que dá mais margem para ele.
+Trabalho com um grupo bastante específico de pessoas${cidade ? ` em ${cidade}` : ''} que construíram patrimônio relevante e estão pensando no próximo passo — seja proteção, diversificação ou simplesmente uma segunda opinião independente sobre o que já têm.
 
-O Hariton quis especificamente entrar em contato. Você tem disponibilidade para uma conversa rápida de 15 minutos esta semana?`
+Teria 15 minutos essa semana para uma conversa rápida? Sem nenhum compromisso — só para entender o seu cenário atual. 🙏`
+    },
+    {
+      // Variante D — Ângulo: perfil seletivo + advisory independente
+      id: 'u_d',
+      texto: (nome) =>
+        `Olá, ${nome}! Tudo bem? Me chamo Sofia Mendes, sou do time de Private Banking da Altum Wealth, de São Paulo. Recebi seu contato por indicação e — sendo direta — não trabalhamos com todos os perfis, mas o seu chamou a atenção do Hariton Andrade.
+
+Ele é advisor independente, sem comissão de produto. Trabalha com quem construiu patrimônio por conta própria e quer uma visão honesta sobre o cenário — sem os conflitos de interesse dos grandes bancos.
+
+Teria 15 minutos essa semana para uma conversa rápida? Nada de pitch, só para eu entender o seu momento atual. 😊`
     }
   ],
 
-  // ── Templates específicos — usados SOMENTE se profissão já foi confirmada ──
+  // ── Templates por nicho ───────────────────────────────────────────────────────
+  // Usados SOMENTE quando a profissão já foi confirmada na conversa
+  // Seguem a mesma estrutura validada, com gancho específico do nicho
+
   medico_cirurgiao: [
     {
       id: 'mc_a',
-      texto: (nome, cidade) => `Olá Dr(a). ${nome}! Tudo bem?
+      texto: (nome, cidade) =>
+        `Olá, Dr(a). ${nome}! Tudo bem? Me chamo Sofia Mendes, sou do time de Private Banking da Altum Wealth. Seu nome chegou até mim por indicação — e o Hariton Andrade pediu especificamente para que eu entrasse em contato.
 
-Sou a Sofia, da Altum Wealth. Hariton pediu para entrar em contato — ele trabalha especificamente com médicos especialistas aqui em ${cidade || 'sua cidade'} que querem proteger o que construíram, longe dos conflitos dos grandes bancos.
+Trabalhamos com médicos especialistas${cidade ? ` em ${cidade}` : ''} que construíram patrimônio expressivo e querem que ele esteja de fato protegido — com a separação jurídica correta entre a atividade profissional e o patrimônio pessoal. É algo que poucos bancos tradicionais sequer mencionam.
 
-Você tem 15 minutos esta semana para uma conversa diagnóstica com ele? Terça ou quinta ficaria melhor?`
+Teria 15 minutos essa semana para uma conversa rápida com o Hariton? Sem compromisso nenhum — só para entender o seu momento atual. 🙏`
     },
     {
       id: 'mc_b',
-      texto: (nome) => `Boa tarde, Dr(a). ${nome}!
+      texto: (nome) =>
+        `Olá, Dr(a). ${nome}! Tudo bem? Aqui é a Sofia Mendes, do Private Banking da Altum Wealth. Chego até você por indicação — e fiquei curiosa para entender melhor o seu cenário.
 
-Sou Sofia, parceira do Hariton Gomes na Altum Wealth. Ele tem trabalhado com cirurgiões que acumularam patrimônio significativo e querem dar um próximo passo — proteção real, sem os conflitos de interesse do banco atual.
+Trabalho com médicos especialistas que, como você, construíram patrimônio relevante ao longo da carreira — e que agora querem garantir que ele esteja protegido e trabalhando com eficiência, independentemente do que aconteça.
 
-Faz sentido trocar uma ideia de 15 minutos? Sem compromisso.`
+Teria 15 minutos esta semana para uma conversa rápida? Sem compromisso, só para eu entender o seu momento. 😊`
     }
   ],
 
   advogado_tributarista: [
     {
       id: 'at_a',
-      texto: (nome) => `Olá Dr(a). ${nome}! Como vai?
+      texto: (nome) =>
+        `Olá, Dr(a). ${nome}! Tudo bem? Me chamo Sofia Mendes, sou do time de Private Banking da Altum Wealth. Seu nome chegou até mim por indicação — e, sendo direta, advogados tributaristas têm um perfil muito específico que o Hariton Andrade gosta de atender.
 
-Sou Sofia, da Altum Wealth. Como tributarista, você sabe como poucos o valor de uma estrutura bem montada — por isso o Hariton quis entrar em contato.
+Você estrutura o patrimônio dos seus clientes com perfeição. A pergunta que o Hariton queria te fazer é: e o seu próprio? Com a Lei 14.754/2023, quem não revisou a estrutura pode estar pagando mais do que deveria.
 
-Teria 15 min esta semana para uma conversa sobre o seu cenário pessoal? Tenho certeza que vai ser útil.`
+Teria 15 minutos essa semana para uma conversa rápida? Sem compromisso nenhum. 🙏`
     }
   ],
 
   ceo_empresario: [
     {
       id: 'ce_a',
-      texto: (nome) => `Olá ${nome}! Tudo bem?
+      texto: (nome, cidade) =>
+        `Olá, ${nome}! Tudo bem? Me chamo Sofia Mendes, sou do time de Private Banking da Altum Wealth, aqui de São Paulo. Chego até você por indicação de alguém que conhece bem o que você construiu.
 
-Sou Sofia, da Altum Wealth — advisory independente, sem os conflitos dos bancos. O Hariton me pediu para falar com você sobre proteção e diversificação do seu patrimônio pessoal.
+Trabalhamos com empresários${cidade ? ` em ${cidade}` : ''} que chegaram a um patrimônio expressivo — e que agora querem garantir que ele esteja diversificado e protegido, separado dos riscos da empresa. Há movimentações no mercado cambial e fiscal que têm gerado janelas relevantes para esse perfil.
 
-Uma pergunta direta: qual % do seu patrimônio está fora do Brasil hoje? Vale uma conversa de 15 min?`
+Teria 15 minutos essa semana para uma conversa rápida? Sem compromisso — só para eu entender o seu momento atual. 😊`
     }
   ],
 
   dentista_especialista: [
     {
       id: 'de_a',
-      texto: (nome, cidade) => `Olá Dr(a). ${nome}!
+      texto: (nome, cidade) =>
+        `Olá, Dr(a). ${nome}! Tudo bem? Me chamo Sofia Mendes, sou do time de Private Banking da Altum Wealth. Seu nome chegou até mim por indicação — e fiquei curiosa para entender mais sobre o seu momento.
 
-Sou Sofia, da Altum Wealth. O Hariton trabalha com especialistas da saúde aqui em ${cidade || 'sua cidade'} que construíram patrimônio relevante e querem fazê-lo trabalhar com mais eficiência.
+Trabalhamos com especialistas da saúde${cidade ? ` em ${cidade}` : ''} que construíram patrimônio relevante e querem que ele esteja trabalhando com mais eficiência e proteção — muito além do que os bancos tradicionais costumam oferecer.
 
-Vale 15 minutinhos de conversa esta semana?`
+Teria 15 minutos essa semana para uma conversa rápida? Sem compromisso nenhum. 🙏`
     }
   ],
 
   engenheiro_executivo: [
     {
       id: 'ee_a',
-      texto: (nome) => `Olá ${nome}! Como vai?
+      texto: (nome) =>
+        `Olá, ${nome}! Tudo bem? Me chamo Sofia Mendes, sou do time de Private Banking da Altum Wealth. Seu nome chegou até mim por indicação — e o perfil que o Hariton Andrade atende com frequência tem muito a ver com o seu.
 
-Sou Sofia, da Altum Wealth. O Hariton me pediu para entrar em contato — ele trabalha com executivos sênior que acumularam patrimônio expressivo, muitas vezes concentrado em uma única empresa ou em ativos nacionais.
+Trabalho com executivos sênior que acumularam patrimônio expressivo — muitas vezes concentrado na empresa onde trabalham — e que precisam de uma estratégia real de diversificação antes que o momento certo passe.
 
-Teria 15 minutos esta semana para uma conversa diagnóstica? Sem compromisso.`
+Teria 15 minutos essa semana para uma conversa rápida? Sem compromisso — só para eu entender o seu cenário atual. 😊`
     }
   ]
 };
 
-function selecionarTemplate(nicho, statsTemplates = {}, profissaoConfirmada = false) {
-  // Se profissão ainda não confirmada, usa template universal
-  const pool = (!profissaoConfirmada && TEMPLATES.universal) ? TEMPLATES.universal : (TEMPLATES[nicho] || TEMPLATES.universal);
+// ─── Seleção de template com A/B ─────────────────────────────────────────────
+
+function selecionarTemplate(nicho, statsTemplates = {}, profissaoConfirmada = false, seed = 0) {
+  // Abertura: sempre usa universal (profissão ainda não confirmada)
+  const pool = (!profissaoConfirmada || !TEMPLATES[nicho])
+    ? TEMPLATES.universal
+    : TEMPLATES[nicho];
+
   if (pool.length === 1) return pool[0];
 
-  const stats = statsTemplates[nicho] || {};
+  const stats    = statsTemplates[nicho] || {};
   const temDados = pool.every(t => (stats[t.id]?.envios || 0) >= 20);
 
   if (temDados) {
+    // A/B winner: usa o template com maior taxa de resposta
     return pool.reduce((best, t) => {
       const tb = (stats[best.id]?.respostas || 0) / Math.max(stats[best.id]?.envios || 1, 1);
-      const tt = (stats[t.id]?.respostas || 0) / Math.max(stats[t.id]?.envios || 1, 1);
+      const tt = (stats[t.id]?.respostas    || 0) / Math.max(stats[t.id]?.envios    || 1, 1);
       return tt > tb ? t : best;
     });
   }
 
+  // Round-robin distribuído: usa seed baseado no lead para não travar no index 0
+  // quando stats ainda estão vazios
   const total = pool.reduce((s, t) => s + (stats[t.id]?.envios || 0), 0);
-  return pool[total % pool.length];
+  const idx = (total + seed) % pool.length;
+  return pool[idx];
 }
 
 function gerarMensagemAbertura(lead, statsTemplates = {}) {
-  // Abertura inicial: sempre usa template universal (sem assumir nicho)
-  const template = selecionarTemplate(lead.nicho, statsTemplates, false);
+  // Seed: usa os últimos 3 chars do lead ID como número para distribuir variantes
+  const seed = lead.id
+    ? parseInt(lead.id.replace(/\D/g, '').slice(-4) || '0', 10)
+    : 0;
+  const template = selecionarTemplate(lead.nicho, statsTemplates, false, seed);
   return {
     templateId: template.id,
-    mensagem: template.texto(lead.nome.split(' ')[0], lead.cidade)
+    mensagem:   template.texto(lead.nome.split(' ')[0], lead.cidade)
   };
 }
 

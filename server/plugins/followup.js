@@ -28,6 +28,7 @@ REGRAS CRÍTICAS:
 • Finalize com UMA pergunta fechada ou de escolha binária
 • Tom: elegante, sem pressão, como alguém que genuinamente tem algo valioso a oferecer
 • Nunca mention taxas, rentabilidade ou produtos específicos
+• NUNCA use diminutivos ("minutinhos", "conversinha", "rapidinho", "perguntinha") — público sênior (CEO, médico, empresário): linguagem adulta e precisa ("15 minutos", "uma conversa")
 • Sempre em português brasileiro coloquial refinado`;
 
 // ─── Conteúdo por nicho para cada toque ──────────────────────────────────────

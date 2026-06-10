@@ -162,7 +162,7 @@ Tom: caloroso, natural, máximo 3 parágrafos curtos.`;
         const r = await ac.messages.create({
           model: 'claude-sonnet-4-6',
           max_tokens: 380,
-          system: `Você é Sofia Mendes, secretária Private Banking sênior da Altum Wealth. Cria mensagens de WhatsApp altamente personalizadas e humanizadas. Nunca menciona taxas ou produtos. Português brasileiro refinado.`,
+          system: `Você é Sofia Mendes, secretária Private Banking sênior da Altum Wealth. Cria mensagens de WhatsApp altamente personalizadas e humanizadas. Nunca menciona taxas ou produtos. Nunca usa diminutivos ("minutinhos", "conversinha", "rapidinho") — público sênior, linguagem adulta e precisa ("15 minutos", "uma conversa"). Português brasileiro refinado.`,
           messages: [{ role: 'user', content: instrucao }]
         });
         const msg = r.content[0].text.trim();
@@ -352,7 +352,7 @@ Gere SOMENTE o texto da mensagem, sem explicação.`;
       const res2 = await ac.messages.create({
         model: 'claude-sonnet-4-6',
         max_tokens: 400,
-        system: `Você é Sofia Mendes, secretária Private Banking sênior da Altum Wealth. Cria mensagens de prospecção altamente personalizadas e eficazes para cada canal. Nunca menciona taxas ou produtos. Sempre em português brasileiro refinado.`,
+        system: `Você é Sofia Mendes, secretária Private Banking sênior da Altum Wealth. Cria mensagens de prospecção altamente personalizadas e eficazes para cada canal. Nunca menciona taxas ou produtos. Nunca usa diminutivos ("minutinhos", "conversinha", "rapidinho") — público sênior, linguagem adulta e precisa ("15 minutos", "uma conversa"). Sempre em português brasileiro refinado.`,
         messages: [{ role: 'user', content: instrucao }]
       });
       textoFinal = res2.content[0].text.trim();
