@@ -49,15 +49,19 @@ function extractTextFromWebhook(body) {
 
 // Considera "entrada" toda mensagem recebida de um lead (não enviada por nós, não status).
 // Tolerante a variações de payload do Z-API: não exige um `type` específico — basta
-// não ser fromMe, não ser status, e ter texto extraível.
+// não ser fromMe, não ser callback de status, e ter texto extraível.
+// IMPORTANTE: NÃO rejeitar por um campo `status` genérico — o Z-API inclui `status`
+// (ex.: "RECEIVED") em mensagens recebidas legítimas. Recibos de entrega/leitura vêm
+// com um `type` próprio (MessageStatusCallback / DeliveryCallback / ReadCallback).
 function isIncomingMessage(body) {
   if (!body || body.fromMe) return false;
-  if (body.isStatusReply || body.isStatus || body.status) return false; // recibos de status
-  const ehEventoConhecido =
+  if (body.isStatusReply === true) return false;
+  if (typeof body.type === 'string' && /status|delivery|read|presence/i.test(body.type)) return false;
+  const ehRecebida =
     body.type === 'ReceivedCallback' ||
     body.event === 'received' ||
     body.type === undefined; // alguns payloads não trazem type
-  if (!ehEventoConhecido && body.type !== undefined) return false;
+  if (!ehRecebida && body.type !== undefined) return false;
   return Boolean(extractTextFromWebhook(body));
 }
 

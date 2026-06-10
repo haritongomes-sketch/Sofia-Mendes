@@ -205,8 +205,9 @@ app.post('/api/webhook/whatsapp', async (req, res) => {
   // (aparece em `vercel logs ... --follow`). Mantido enxuto para não poluir.
   console.log('[Webhook·raw]', JSON.stringify({
     type: req.body?.type, event: req.body?.event, fromMe: req.body?.fromMe,
-    isStatusReply: req.body?.isStatusReply, phone: req.body?.phone,
-    text: req.body?.text?.message || req.body?.body || req.body?.message || null
+    isStatusReply: req.body?.isStatusReply, status: req.body?.status, phone: req.body?.phone,
+    text: req.body?.text?.message || req.body?.body || req.body?.message || null,
+    incoming: isIncomingMessage(req.body)
   }));
 
   // Mensagens que não precisam de processamento respondem imediatamente
