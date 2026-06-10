@@ -33,6 +33,8 @@ const { proximasDuasJanelas, criarEventoReuniao } = require('./skills/agenda-goo
 const { partesBR, instanteBR } = require('./scheduler');
 const { htmlOnePager, URL_ONE_PAGER, NICHO_TO_SEG } = require('./skills/one-pager');
 const { obterScriptLinkedin } = require('./skills/linkedin');
+const { htmlImportTool } = require('./skills/import-tool');
+const { importarLeads, liberarLeadsDoDia, statusFila } = require('./plugins/fila');
 const { notificarReuniaoConfirmada } = require('./plugins/notificacao');
 const { calcularScore } = require('./plugins/scoring');
 const { executarReengajamento4Meses, executarReengajamento5Dias } = require('./plugins/reengagement');
@@ -80,6 +82,81 @@ app.get('/api/one-pager', (req, res) => {
   const seg = (req.query.seg || '').toString().toLowerCase().trim();
   res.set('Content-Type', 'text/html; charset=utf-8');
   res.send(htmlOnePager(seg));
+});
+
+// ─── Fila de Prospecção — importação em massa + liberação drip ────────────────
+
+// Ferramenta web de importação (Excel/CSV → fila). Mesma origem da API → sem CORS.
+app.get('/importar', (req, res) => {
+  res.set('Content-Type', 'text/html; charset=utf-8');
+  res.send(htmlImportTool());
+});
+
+// Importa uma lista de leads para a FILA (não dispara a Sofia na hora).
+// Protegido pelo CRON_SECRET (header x-cron-secret) — é um endpoint de escrita em massa.
+app.post('/api/leads/import', async (req, res) => {
+  const secret = req.headers['x-cron-secret'] || req.body?.secret;
+  if (secret !== (process.env.CRON_SECRET || 'altum-cron-secret')) {
+    return res.status(401).json({ error: 'não autorizado' });
+  }
+  const leads = req.body?.leads;
+  if (!Array.isArray(leads) || leads.length === 0) {
+    return res.status(400).json({ error: 'envie { leads: [...] } com ao menos um lead' });
+  }
+  const db = getPrisma();
+  try {
+    const resultado = await importarLeads(db, leads);
+    // Opcional: já liberar a cota do dia logo após importar
+    let liberacao = null;
+    if (req.body?.liberarAgora) {
+      const p = liberarLeadsDoDia(db);
+      if (req.waitUntil) { req.waitUntil(p); liberacao = { agendado: true }; }
+      else liberacao = await p;
+    }
+    const fila = await statusFila(db);
+    res.json({ ok: true, ...resultado, liberacao, fila });
+  } catch (err) {
+    console.error('[Import] Erro:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Status da fila (quantos aguardam, liberados hoje X/máx, dias para esvaziar).
+app.get('/api/leads/fila', async (req, res) => {
+  const db = getPrisma();
+  try {
+    res.json(await statusFila(db));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Liberação drip — chamada pelo cron (GitHub Actions). Protegida por x-cron-secret.
+app.post('/api/cron/liberar-leads', async (req, res) => {
+  if (!verificarCron(req, res)) return;
+  const db = getPrisma();
+  try {
+    const p = liberarLeadsDoDia(db);
+    // Processa em background quando possível (evita timeout do serverless em lotes).
+    if (req.waitUntil) { req.waitUntil(p); return res.json({ ok: true, agendado: true }); }
+    res.json({ ok: true, ...(await p) });
+  } catch (err) {
+    console.error('[Cron Liberar]', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Variante GET para Vercel Native Cron (não precisa de secret — só o Vercel chama).
+app.get('/api/cron/liberar-leads-vercel', async (req, res) => {
+  const db = getPrisma();
+  try {
+    const p = liberarLeadsDoDia(db);
+    if (req.waitUntil) { req.waitUntil(p); return res.json({ ok: true, agendado: true }); }
+    res.json({ ok: true, ...(await p) });
+  } catch (err) {
+    console.error('[Vercel Cron Liberar]', err.message);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ─── Leads ────────────────────────────────────────────────────────────────────

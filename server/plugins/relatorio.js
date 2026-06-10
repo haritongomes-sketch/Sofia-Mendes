@@ -9,6 +9,7 @@
 
 const { sendWhatsApp } = require('../zapi');
 const { proximaAcaoCadencia } = require('./cadencia');
+const { statusFila } = require('./fila');
 
 const CANAL_LABEL = { linkedin: '🔗 LinkedIn', email: '✉️ E-mail', whatsapp: '💬 WhatsApp' };
 
@@ -123,6 +124,17 @@ async function enviarRelatorioDiario(prisma) {
       linhas.push(`  ${acao.acao}`);
     });
     if (toquesManuais.length > 8) linhas.push(`  ... e mais ${toquesManuais.length - 8} outros`);
+  }
+
+  // Fila de prospecção (importação em massa + liberação drip)
+  let fila = null;
+  try { fila = await statusFila(prisma); } catch (_) { /* fila opcional no relatório */ }
+  if (fila && (fila.naFila > 0 || fila.liberadosHoje > 0)) {
+    linhas.push(``);
+    linhas.push(`*📥 Fila de prospecção*`);
+    linhas.push(`• Liberados hoje: ${fila.liberadosHoje}/${fila.max}`);
+    linhas.push(`• Aguardando na fila: ${fila.naFila}`);
+    if (fila.naFila > 0) linhas.push(`• Esvazia em ~${fila.diasUteisParaEsvaziar} dia(s) útil(eis)`);
   }
 
   linhas.push(``);

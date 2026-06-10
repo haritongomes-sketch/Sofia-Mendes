@@ -8,6 +8,8 @@ on:
     - cron: '5 9,15,21 * * *'
     # Relatório diário: 10h50 UTC = 7h50 Brasília (seg–sex)
     - cron: '50 10 * * 1-5'
+    # Liberação drip da fila: 11h00 UTC = 8h00 Brasília (seg–sex)
+    - cron: '0 11 * * 1-5'
   workflow_dispatch:
     inputs:
       job:
@@ -15,7 +17,7 @@ on:
         required: true
         default: 'followup'
         type: choice
-        options: [followup, reengagement, relatorio, todos]
+        options: [followup, reengagement, relatorio, liberar, todos]
 
 env:
   API_URL: ${{ secrets.VERCEL_API_URL }}
@@ -93,3 +95,27 @@ jobs:
           HTTP_CODE=$(echo "$RESPONSE" | tail -1)
           echo "Status: $HTTP_CODE"
           [ "$HTTP_CODE" = "200" ] && echo "✅ Relatório enviado" || echo "❌ Falha HTTP $HTTP_CODE"
+
+  # ── Liberação drip da fila (até MAX_LEADS_DIA/dia útil) ──────────────
+  liberar:
+    name: Liberar Leads da Fila
+    runs-on: ubuntu-latest
+    if: >
+      (github.event_name == 'workflow_dispatch' && (inputs.job == 'liberar' || inputs.job == 'todos')) ||
+      (github.event_name == 'schedule' && startsWith(github.event.schedule, '0 11'))
+    steps:
+      - name: Verificar secrets
+        run: |
+          if [ -z "$API_URL" ]; then echo "❌ VERCEL_API_URL não configurado"; exit 1; fi
+          if [ -z "$CRON_SECRET" ]; then echo "❌ CRON_SECRET não configurado"; exit 1; fi
+      - name: Liberar leads do dia
+        run: |
+          RESPONSE=$(curl -s -w "\n%{http_code}" \
+            -X POST "$API_URL/api/cron/liberar-leads" \
+            -H "x-cron-secret: $CRON_SECRET" \
+            -H "Content-Type: application/json" \
+            --max-time 90)
+          HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+          BODY=$(echo "$RESPONSE" | head -1)
+          echo "Status: $HTTP_CODE | Body: $BODY"
+          [ "$HTTP_CODE" = "200" ] && echo "✅ Liberação OK" || (echo "❌ Falha HTTP $HTTP_CODE" && exit 1)

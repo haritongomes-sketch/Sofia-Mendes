@@ -141,7 +141,8 @@ async function executarFollowup(prisma) {
       mensagens: { orderBy: { timestamp: 'desc' }, take: 10 }
     },
     where: {
-      estagio:       { notIn: ['confirmado', 'reuniao', 'cessado', 'sem_interesse'] },
+      // 'fila' = ainda não liberado pelo drip (sem abertura) — fora da cadência
+      estagio:       { notIn: ['fila', 'confirmado', 'reuniao', 'cessado', 'sem_interesse'] },
       cessarContato: false
     }
   });

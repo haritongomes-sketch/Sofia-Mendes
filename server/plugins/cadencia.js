@@ -51,6 +51,7 @@ function parseTags(tagsJson) {
  */
 function proximaAcaoCadencia(lead) {
   if (!lead) return null;
+  if (lead.estagio === 'fila') return null;            // ainda na fila — não liberado
   if (ESTAGIOS_ENCERRADOS.includes(lead.estagio)) return null;
 
   const dias = diasDesde(lead.createdAt);
