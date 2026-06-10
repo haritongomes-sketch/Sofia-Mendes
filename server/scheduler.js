@@ -77,4 +77,38 @@ async function podendoAgendar(dataDesejada) {
   return { pode: true, dataReuniao: horaReuniao, formatada: formatarDataBR(horaReuniao) };
 }
 
-module.exports = { podendoAgendar, formatarDataBR };
+// ─── Próximas N janelas livres (compute, ciente do banco) ─────────────────────
+// Caminho padrão para oferecer DOIS horários sem dependência externa.
+// Horas candidatas em dias úteis; respeita MAX_REUNIOES_DIA e evita colisão exata.
+async function proximasJanelas(n = 2, apartirDe = new Date()) {
+  const max = parseInt(process.env.MAX_REUNIOES_DIA || '2');
+  const HORAS_CANDIDATAS = [10, 14, 16]; // janelas preferidas (Brasília)
+  const slots = [];
+
+  for (let diasFrente = 0; diasFrente <= 21 && slots.length < n; diasFrente++) {
+    const dia = new Date(apartirDe);
+    dia.setDate(dia.getDate() + diasFrente);
+    const dow = dia.getDay();
+    if (dow === 0 || dow === 6) continue; // fim de semana
+
+    const countDia = await prisma.reuniao.count({
+      where: { data: { gte: startOfDay(dia), lte: endOfDay(dia) }, status: 'agendada' }
+    });
+    let vagas = max - countDia;
+    if (vagas <= 0) continue;
+
+    for (const hora of HORAS_CANDIDATAS) {
+      if (slots.length >= n || vagas <= 0) break;
+      const slot = new Date(dia);
+      slot.setHours(hora, 0, 0, 0);
+      if (slot <= apartirDe) continue; // não oferecer horário no passado
+      const ocupado = await prisma.reuniao.count({ where: { data: slot, status: 'agendada' } });
+      if (ocupado > 0) continue;
+      slots.push({ inicio: slot, formatada: formatarDataBR(slot), iso: slot.toISOString() });
+      vagas--;
+    }
+  }
+  return slots;
+}
+
+module.exports = { podendoAgendar, formatarDataBR, proximasJanelas, startOfDay, endOfDay, ehHorarioComercial };

@@ -171,6 +171,13 @@ export default function PrivateCRMv3() {
     await fetch(`${API}/api/leads/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ linkedinStatus }) });
   };
 
+  // Transbordo manual: pausa/retoma a IA (Sofia) para este lead.
+  const toggleIA = async (id, pausarIA) => {
+    setLeads(p => p.map(l => l.id === id ? { ...l, pausarIA } : l));
+    if (selected?.id === id) setSelected(p => ({ ...p, pausarIA }));
+    await fetch(`${API}/api/leads/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pausarIA }) });
+  };
+
   // ─── AI Agent (via backend proxy) ────────────────────────────────────────
 
   const sendMsg = async (text) => {
@@ -270,6 +277,9 @@ export default function PrivateCRMv3() {
           {lis && <span style={S.pill(lis.color)}>{lis.label}</span>}
         </div>
         <WaConvBadge lead={lead}/>
+        {lead.pausarIA && (
+          <div style={{ marginTop:"3px", fontSize:"9px", color:"#f59e0b", fontWeight:600 }}>👤 Atendimento humano</div>
+        )}
         {(lead.reunioes || []).some(r => r.status === 'agendada') && (
           <div style={{ marginTop:"3px", fontSize:"9px", color:"#34d399", fontWeight:600 }}>📅 Reunião agendada</div>
         )}
@@ -361,6 +371,22 @@ export default function PrivateCRMv3() {
               </button>
             ))}
           </div>
+        </div>
+
+        <div style={{ marginBottom:"8px" }}>
+          <div style={S.lbl}>Controle da IA (transbordo)</div>
+          <button
+            onClick={() => toggleIA(selected.id, !selected.pausarIA)}
+            style={{
+              width:"100%", padding:"7px 10px", borderRadius:"6px", cursor:"pointer",
+              fontFamily:"'Sora','Inter',sans-serif", fontSize:"11px", fontWeight:600,
+              display:"flex", alignItems:"center", justifyContent:"center", gap:"6px",
+              background: selected.pausarIA ? "#f59e0b18" : "#34d39918",
+              border: `1px solid ${selected.pausarIA ? "#f59e0b" : "#34d399"}`,
+              color: selected.pausarIA ? "#f59e0b" : "#34d399"
+            }}>
+            {selected.pausarIA ? "👤 Atendimento humano (IA pausada) — clique p/ reativar" : "🤖 IA ativa — clique p/ assumir"}
+          </button>
         </div>
 
         <div style={{ marginBottom:"10px" }}>

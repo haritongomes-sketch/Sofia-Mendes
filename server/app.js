@@ -14,7 +14,7 @@ function getPrisma() {
 const sofia = require('./sofia');
 const { extrairDadosConversa } = require('./sofia');
 const { sendWhatsApp, extractPhoneFromWebhook, extractTextFromWebhook, isIncomingMessage } = require('./zapi');
-const { podendoAgendar } = require('./scheduler');
+const { proximasDuasJanelas, criarEventoReuniao } = require('./skills/agenda-google');
 const { notificarReuniaoConfirmada } = require('./plugins/notificacao');
 const { calcularScore } = require('./plugins/scoring');
 const { executarReengajamento4Meses, executarReengajamento5Dias } = require('./plugins/reengagement');
@@ -93,27 +93,21 @@ app.post('/api/leads', async (req, res) => {
       }
     });
 
-    // Em Vercel: waitUntil mantém a função viva após o response
-    // Em local: setImmediate funciona normalmente
-    const processarAbertura = async () => {
-      try {
-        const abertura = await sofia.gerarAbertura(lead);
-        await db.mensagem.create({ data: { leadId: lead.id, role: 'assistant', content: abertura } });
-        await sendWhatsApp(whatsapp, abertura);
-        await db.lead.update({ where: { id: lead.id }, data: { score: 5, ultimaInteracao: new Date() } });
-        console.log(`[Sofia] Abertura enviada → ${lead.nome}`);
-      } catch (err) {
-        console.error('[Sofia] Erro ao enviar abertura:', err.message);
-      }
-    };
-
-    if (req.waitUntil) {
-      req.waitUntil(processarAbertura()); // Vercel
-    } else {
-      setImmediate(processarAbertura);    // local dev
+    // Processa abertura de forma síncrona — no Vercel serverless, setImmediate
+    // não executa após res.json(). Por isso aguardamos antes de responder.
+    let aberturaEnviada = false;
+    try {
+      const abertura = await sofia.gerarAbertura(lead);
+      await db.mensagem.create({ data: { leadId: lead.id, role: 'assistant', content: abertura } });
+      await sendWhatsApp(whatsapp, abertura);
+      await db.lead.update({ where: { id: lead.id }, data: { score: 5, ultimaInteracao: new Date() } });
+      aberturaEnviada = true;
+      console.log(`[Sofia] Abertura enviada → ${lead.nome}`);
+    } catch (err) {
+      console.error('[Sofia] Erro ao enviar abertura:', err.message);
     }
 
-    res.json({ success: true, lead });
+    res.json({ success: true, lead, aberturaEnviada });
   } catch (err) {
     if (err.code === 'P2002') return res.status(409).json({ error: 'WhatsApp já cadastrado' });
     res.status(500).json({ error: err.message });
@@ -127,36 +121,33 @@ app.patch('/api/leads/:id', async (req, res) => {
     const data = { ...rest };
     if (Array.isArray(data.instituicoes)) data.instituicoes = JSON.stringify(data.instituicoes);
     if (Array.isArray(data.tags))         data.tags         = JSON.stringify(data.tags);
-    const lead = await db.lead.update({ where: { id: req.params.id }, data });
-    res.json(lead);
+    let lead = await db.lead.update({ where: { id: req.params.id }, data });
 
-    // Recontato pós-atualização (assíncrono, não bloqueia resposta)
+    // Recontato: processa de forma síncrona ANTES de responder
+    // (no Vercel serverless, setImmediate não executa após res.json())
     if (recontactar && recontactar !== 'nao' && !lead.cessarContato) {
-      const processar = async () => {
-        try {
-          const leadFull = await db.lead.findUnique({
-            where: { id: lead.id },
-            include: { mensagens: { orderBy: { timestamp: 'asc' }, take: 20 } }
-          });
-          const { sendWhatsApp } = require('./zapi');
-          const Anthropic = require('@anthropic-ai/sdk');
-          const ac = new Anthropic();
-          const primeiroNome = leadFull.nome.split(' ')[0];
-          const userMsgs = leadFull.mensagens.filter(m => m.role === 'user').length;
-          const ultimaMsg = leadFull.mensagens.slice(-1)[0];
+      try {
+        const leadFull = await db.lead.findUnique({
+          where: { id: lead.id },
+          include: { mensagens: { orderBy: { timestamp: 'asc' }, take: 20 } }
+        });
+        const ac = new Anthropic();
+        const primeiroNome = leadFull.nome.split(' ')[0];
+        const userMsgs = leadFull.mensagens.filter(m => m.role === 'user').length;
+        const ultimaMsg = leadFull.mensagens.slice(-1)[0];
 
-          let instrucao;
-          if (recontactar === 'nova_abordagem') {
-            instrucao = `Gere uma mensagem de WhatsApp para ${primeiroNome} com um ÂNGULO TOTALMENTE NOVO.
+        let instrucao;
+        if (recontactar === 'nova_abordagem') {
+          instrucao = `Gere uma mensagem de WhatsApp para ${primeiroNome} com um ÂNGULO TOTALMENTE NOVO.
 Perfil: ${leadFull.profissao || 'profissional'}, ${leadFull.cidade || 'Brasil'}.
 Patrimônio: ${leadFull.patrimonio || 'não informado'}.
 ${userMsgs > 0 ? `Já houve ${userMsgs} mensagem(ns) anterior(es) — use abordagem completamente diferente. Não repita o mesmo ângulo.` : 'Primeira abordagem — mensagem de abertura calorosa.'}
 Gancho: use um fato de mercado recente ou uma perspectiva que o cliente ainda não ouviu.
 Objetivo: despertar curiosidade e propor os 15 minutos com Hariton.
 Tom: caloroso, direto, máximo 3 parágrafos curtos.`;
-          } else {
-            // continuar
-            instrucao = `Gere uma mensagem de WhatsApp retomando a conversa com ${primeiroNome} de onde parou.
+        } else {
+          // continuar
+          instrucao = `Gere uma mensagem de WhatsApp retomando a conversa com ${primeiroNome} de onde parou.
 Perfil: ${leadFull.profissao || 'profissional'}, ${leadFull.cidade || 'Brasil'}.
 ${userMsgs > 0
   ? `Última mensagem enviada: "${ultimaMsg?.content?.slice(0, 150) || '...'}"
@@ -164,26 +155,25 @@ Retome naturalmente, como se o tempo passado fosse normal — sem mencionar "sum
   : 'Ainda não houve conversa — inicie como primeiro contato.'}
 Objetivo: continuar o fluxo em direção ao agendamento.
 Tom: caloroso, natural, máximo 3 parágrafos curtos.`;
-          }
-
-          const r = await ac.messages.create({
-            model: 'claude-sonnet-4-6',
-            max_tokens: 380,
-            system: `Você é Sofia Mendes, secretária Private Banking sênior da Altum Wealth. Cria mensagens de WhatsApp altamente personalizadas e humanizadas. Nunca menciona taxas ou produtos. Português brasileiro refinado.`,
-            messages: [{ role: 'user', content: instrucao }]
-          });
-          const msg = r.content[0].text.trim();
-          await sendWhatsApp(leadFull.whatsapp, msg);
-          await db.mensagem.create({ data: { leadId: leadFull.id, role: 'assistant', content: msg } });
-          await db.lead.update({ where: { id: leadFull.id }, data: { ultimaInteracao: new Date() } });
-          console.log(`[Recontato·${recontactar}] ✓ ${leadFull.nome}`);
-        } catch (err) {
-          console.error('[Recontato] Erro:', err.message);
         }
-      };
-      if (req.waitUntil) req.waitUntil(processar());
-      else setImmediate(processar);
+
+        const r = await ac.messages.create({
+          model: 'claude-sonnet-4-6',
+          max_tokens: 380,
+          system: `Você é Sofia Mendes, secretária Private Banking sênior da Altum Wealth. Cria mensagens de WhatsApp altamente personalizadas e humanizadas. Nunca menciona taxas ou produtos. Português brasileiro refinado.`,
+          messages: [{ role: 'user', content: instrucao }]
+        });
+        const msg = r.content[0].text.trim();
+        await sendWhatsApp(leadFull.whatsapp, msg);
+        await db.mensagem.create({ data: { leadId: leadFull.id, role: 'assistant', content: msg } });
+        lead = await db.lead.update({ where: { id: leadFull.id }, data: { ultimaInteracao: new Date() } });
+        console.log(`[Recontato·${recontactar}] ✓ ${leadFull.nome}`);
+      } catch (err) {
+        console.error('[Recontato] Erro:', err.message);
+      }
     }
+
+    res.json(lead);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -209,6 +199,14 @@ app.delete('/api/leads/:id', async (req, res) => {
 // Z-API aguarda resposta por até 30s; Claude + sendWhatsApp leva ~5s total.
 
 app.post('/api/webhook/whatsapp', async (req, res) => {
+  // Log compacto do payload bruto — essencial para diagnosticar a config do Z-API.
+  // (aparece em `vercel logs ... --follow`). Mantido enxuto para não poluir.
+  console.log('[Webhook·raw]', JSON.stringify({
+    type: req.body?.type, event: req.body?.event, fromMe: req.body?.fromMe,
+    isStatusReply: req.body?.isStatusReply, phone: req.body?.phone,
+    text: req.body?.text?.message || req.body?.body || req.body?.message || null
+  }));
+
   // Mensagens que não precisam de processamento respondem imediatamente
   if (!isIncomingMessage(req.body)) return res.json({ ok: true, skip: true });
 
@@ -234,6 +232,15 @@ app.post('/api/webhook/whatsapp', async (req, res) => {
       return res.json({ ok: true, skip: 'cessar_contato' });
     }
 
+    // Transbordo manual: IA pausada (Hariton assumiu). Registra a mensagem do lead
+    // para o histórico do CRM, mas a Sofia NÃO responde até a IA ser reativada.
+    if (lead.pausarIA) {
+      await db.mensagem.create({ data: { leadId: lead.id, role: 'user', content: userMsg } });
+      await db.lead.update({ where: { id: lead.id }, data: { ultimaInteracao: new Date() } });
+      console.log(`[Webhook] IA pausada (atendimento humano) → ${lead.nome}`);
+      return res.json({ ok: true, skip: 'ia_pausada' });
+    }
+
     console.log(`[Webhook] ${lead.nome}: "${userMsg.slice(0, 60)}"`);
     await db.mensagem.create({ data: { leadId: lead.id, role: 'user', content: userMsg } });
 
@@ -242,7 +249,7 @@ app.post('/api/webhook/whatsapp', async (req, res) => {
       sofia.responder(lead, userMsg),
       extrairDadosConversa(userMsg, lead)
     ]);
-    const { resposta, novoEstagio, agendou, cessarContato } = sofiaResult;
+    const { resposta, novoEstagio, agendou, dataReuniaoISO, cessarContato } = sofiaResult;
 
     await db.mensagem.create({ data: { leadId: lead.id, role: 'assistant', content: resposta } });
 
@@ -259,15 +266,23 @@ app.post('/api/webhook/whatsapp', async (req, res) => {
     }
 
     if (agendou) {
-      const ag = await podendoAgendar(new Date());
-      if (ag.pode) {
+      // Usa o horário exato escolhido pelo cliente (ISO emitido pela Sofia);
+      // se ausente/ inválido, cai na próxima janela livre.
+      let dataReuniao = dataReuniaoISO ? new Date(dataReuniaoISO) : null;
+      if (!dataReuniao || isNaN(dataReuniao.getTime())) {
+        const janelas = await proximasDuasJanelas(new Date());
+        dataReuniao = janelas[0]?.inicio || null;
+      }
+      if (dataReuniao) {
         const reuniao = await db.reuniao.create({
-          data: { leadId: lead.id, data: ag.dataReuniao, status: 'agendada', canal: 'whatsapp' }
+          data: { leadId: lead.id, data: dataReuniao, status: 'agendada', canal: 'whatsapp' }
         });
         updateData.estagio = 'reuniao';
         updateData.semInteresse = false;
+        // Cria evento no Google Calendar (no-op se não configurado) + notifica Hariton
+        const evento = await criarEventoReuniao({ ...lead, ...updateData }, dataReuniao);
         await notificarReuniaoConfirmada({ ...lead, ...updateData }, reuniao);
-        console.log(`[Agenda] Reunião → ${lead.nome} em ${ag.formatada}`);
+        console.log(`[Agenda] Reunião → ${lead.nome} em ${dataReuniao.toISOString()} | google=${evento.criado}`);
       }
     }
 

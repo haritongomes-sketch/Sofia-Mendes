@@ -1,6 +1,6 @@
 generator client {
   provider      = "prisma-client-js"
-  binaryTargets = ["native", "linux-musl-openssl-3.0.x", "rhel-openssl-1.0.x"]
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x", "rhel-openssl-3.0.x", "rhel-openssl-1.0.x"]
 }
 
 datasource db {
@@ -32,6 +32,7 @@ model Lead {
   reengajado       Boolean    @default(false)
   semInteresse     Boolean    @default(false)
   cessarContato    Boolean    @default(false)
+  pausarIA         Boolean    @default(false)
   ultimaInteracao  DateTime?
   reengajarEm      DateTime?
   templateId       String?

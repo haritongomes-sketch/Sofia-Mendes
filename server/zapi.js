@@ -1,40 +1,64 @@
 const fetch = require('node-fetch');
 
-const BASE_URL = `https://api.z-api.io/instances/${process.env.ZAPI_INSTANCE_ID}/token/${process.env.ZAPI_TOKEN}`;
+// .trim() previne quebras de linha acidentais nas env vars (Vercel CLI às vezes as inclui)
+const INSTANCE_ID = (process.env.ZAPI_INSTANCE_ID || '').trim();
+const TOKEN       = (process.env.ZAPI_TOKEN       || '').trim();
+const BASE_URL    = `https://api.z-api.io/instances/${INSTANCE_ID}/token/${TOKEN}`;
 
 async function sendWhatsApp(phone, message) {
   const normalizedPhone = phone.replace(/\D/g, '');
-  try {
-    const res = await fetch(`${BASE_URL}/send-text`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Client-Token': process.env.ZAPI_CLIENT_TOKEN || ''
-      },
-      body: JSON.stringify({ phone: normalizedPhone, message })
-    });
-    const data = await res.json();
-    if (!res.ok) console.error('[Z-API] Erro ao enviar:', data);
-    return data;
-  } catch (err) {
-    console.error('[Z-API] Falha na requisição:', err.message);
+
+  // Monta headers: Client-Token só é incluído quando configurado
+  const headers = { 'Content-Type': 'application/json' };
+  if (process.env.ZAPI_CLIENT_TOKEN) {
+    headers['Client-Token'] = process.env.ZAPI_CLIENT_TOKEN;
   }
+
+  const res = await fetch(`${BASE_URL}/send-text`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ phone: normalizedPhone, message, delayMessage: 0 })
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    console.error('[Z-API] Erro ao enviar:', JSON.stringify(data));
+    throw new Error(`Z-API ${res.status}: ${JSON.stringify(data)}`);
+  }
+  console.log('[Z-API] Enviado para', normalizedPhone, '→', data);
+  return data;
 }
 
 function extractPhoneFromWebhook(body) {
-  return (body.phone || body.participantPhone || '').replace(/\D/g, '');
+  return (body.phone || body.participantPhone || body.sender || body.from || '').toString().replace(/\D/g, '');
 }
 
+// Texto pode chegar em vários formatos dependendo da versão/tipo de mensagem do Z-API
 function extractTextFromWebhook(body) {
-  return body.text?.message || body.body || '';
+  return (
+    body.text?.message ||                       // texto simples (formato mais comum)
+    (typeof body.text === 'string' ? body.text : '') ||
+    body.body ||
+    body.message ||
+    body.caption ||                             // imagem/vídeo com legenda
+    body.buttonsResponseMessage?.message ||     // resposta de botão
+    body.listResponseMessage?.message ||        // resposta de lista
+    body.hydratedTemplate?.message ||
+    ''
+  ).toString().trim();
 }
 
+// Considera "entrada" toda mensagem recebida de um lead (não enviada por nós, não status).
+// Tolerante a variações de payload do Z-API: não exige um `type` específico — basta
+// não ser fromMe, não ser status, e ter texto extraível.
 function isIncomingMessage(body) {
-  return (
-    !body.fromMe &&
-    (body.type === 'ReceivedCallback' || body.event === 'received') &&
-    (body.text?.message || body.body)
-  );
+  if (!body || body.fromMe) return false;
+  if (body.isStatusReply || body.isStatus || body.status) return false; // recibos de status
+  const ehEventoConhecido =
+    body.type === 'ReceivedCallback' ||
+    body.event === 'received' ||
+    body.type === undefined; // alguns payloads não trazem type
+  if (!ehEventoConhecido && body.type !== undefined) return false;
+  return Boolean(extractTextFromWebhook(body));
 }
 
 module.exports = { sendWhatsApp, extractPhoneFromWebhook, extractTextFromWebhook, isIncomingMessage };
