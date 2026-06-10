@@ -11,16 +11,17 @@ function getPrisma() {
   return prisma;
 }
 
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
 // Salva a mensagem do lead com o zapiMessageId (trava de deduplicação).
-// Retorna false se for duplicata (violação de unicidade) — reentrega/corrida do webhook.
+// Retorna o registro criado, ou null se for duplicata (reentrega/corrida do webhook).
 async function salvarMsgUsuario(db, leadId, content, zapiMessageId) {
   try {
-    await db.mensagem.create({
+    return await db.mensagem.create({
       data: { leadId, role: 'user', content, zapiMessageId: zapiMessageId || undefined }
     });
-    return true;
   } catch (err) {
-    if (err.code === 'P2002') return false; // já existe mensagem com este zapiMessageId
+    if (err.code === 'P2002') return null; // já existe mensagem com este zapiMessageId
     throw err;
   }
 }
@@ -281,18 +282,44 @@ app.post('/api/webhook/whatsapp', async (req, res) => {
     }
 
     console.log(`[Webhook] ${lead.nome}: "${userMsg.slice(0, 60)}"`);
-    // Trava de corrida: se a mesma mensagem chegar simultaneamente, a 2ª falha aqui
-    // (zapiMessageId é @unique) e abortamos antes de a Sofia responder.
-    const salvou = await salvarMsgUsuario(db, lead.id, userMsg, messageId);
-    if (!salvou) {
+    const meuSave = await salvarMsgUsuario(db, lead.id, userMsg, messageId);
+    if (!meuSave) {
       console.log(`[Webhook] Duplicata ignorada (corrida) → ${lead.nome}`);
       return res.json({ ok: true, skip: 'duplicate_race' });
     }
 
-    // Sofia gera resposta + extração de dados em paralelo
+    // ── Debounce: agrupa mensagens enviadas em sequência ───────────────────────
+    // Aguarda uma janela curta. Se o lead mandar outra mensagem nesse meio, ESTA
+    // invocação cede a vez — quem responde é a invocação da última mensagem,
+    // juntando o disparo inteiro. Evita resposta picotada; conversa mais humana.
+    const DEBOUNCE_MS = parseInt(process.env.DEBOUNCE_MS || '6000');
+    await sleep(DEBOUNCE_MS);
+    const ultimaUser = await db.mensagem.findFirst({
+      where: { leadId: lead.id, role: 'user' }, orderBy: { timestamp: 'desc' }
+    });
+    if (ultimaUser && ultimaUser.id !== meuSave.id) {
+      console.log(`[Webhook] Debounce: mensagem mais nova chegou → cede a vez (${lead.nome})`);
+      return res.json({ ok: true, skip: 'debounced' });
+    }
+
+    // Sou a última do disparo: recarrego e agrego as mensagens do lead ainda sem resposta
+    const fresh = await db.lead.findUnique({
+      where: { id: lead.id },
+      include: { mensagens: { orderBy: { timestamp: 'asc' } }, reunioes: true }
+    });
+    const todasMsgs = fresh.mensagens;
+    let corte = todasMsgs.length - 1;
+    while (corte >= 0 && todasMsgs[corte].role === 'user') corte--;
+    const disparo        = todasMsgs.slice(corte + 1);              // mensagens do lead sem resposta
+    const historicoMsgs  = todasMsgs.slice(0, corte + 1).slice(-20); // contexto até a última resposta
+    const msgCombinada   = disparo.map(m => m.content).join('\n');
+    const leadCtx        = { ...fresh, mensagens: historicoMsgs };
+    if (disparo.length > 1) console.log(`[Webhook] Disparo agregado: ${disparo.length} mensagens → ${lead.nome}`);
+
+    // Sofia gera resposta + extração de dados em paralelo (sobre o disparo combinado)
     const [sofiaResult, dadosExtraidos] = await Promise.all([
-      sofia.responder(lead, userMsg),
-      extrairDadosConversa(userMsg, lead)
+      sofia.responder(leadCtx, msgCombinada),
+      extrairDadosConversa(msgCombinada, leadCtx)
     ]);
     const { resposta, novoEstagio, agendou, dataReuniaoISO, cessarContato } = sofiaResult;
 
