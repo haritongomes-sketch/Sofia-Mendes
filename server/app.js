@@ -34,7 +34,7 @@ const { partesBR, instanteBR } = require('./scheduler');
 const { htmlOnePager, URL_ONE_PAGER, NICHO_TO_SEG } = require('./skills/one-pager');
 const { obterScriptLinkedin } = require('./skills/linkedin');
 const { htmlImportTool } = require('./skills/import-tool');
-const { importarLeads, liberarLeadsDoDia, statusFila } = require('./plugins/fila');
+const { importarLeads, liberarLeadsDoDia, statusFila, listarListas } = require('./plugins/fila');
 const { notificarReuniaoConfirmada } = require('./plugins/notificacao');
 const { calcularScore } = require('./plugins/scoring');
 const { executarReengajamento4Meses, executarReengajamento5Dias } = require('./plugins/reengagement');
@@ -105,11 +105,11 @@ app.post('/api/leads/import', async (req, res) => {
   }
   const db = getPrisma();
   try {
-    const resultado = await importarLeads(db, leads);
-    // Opcional: já liberar a cota do dia logo após importar
+    const resultado = await importarLeads(db, leads, { lista: req.body?.lista });
+    // Opcional: já liberar a cota do dia logo após importar (priorizando esta lista)
     let liberacao = null;
     if (req.body?.liberarAgora) {
-      const p = liberarLeadsDoDia(db);
+      const p = liberarLeadsDoDia(db, { lista: req.body?.lista });
       if (req.waitUntil) { req.waitUntil(p); liberacao = { agendado: true }; }
       else liberacao = await p;
     }
@@ -126,6 +126,34 @@ app.get('/api/leads/fila', async (req, res) => {
   const db = getPrisma();
   try {
     res.json(await statusFila(db));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Listas (segmentos por importação) com contagens por situação.
+app.get('/api/leads/listas', async (req, res) => {
+  const db = getPrisma();
+  try {
+    const [listas, fila] = await Promise.all([listarListas(db), statusFila(db)]);
+    res.json({ listas, fila });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Liberação sob demanda de uma lista específica (até a cota global do dia).
+// Protegida por x-cron-secret (mesma chave da importação).
+app.post('/api/leads/liberar', async (req, res) => {
+  const secret = req.headers['x-cron-secret'] || req.body?.secret;
+  if (secret !== (process.env.CRON_SECRET || 'altum-cron-secret')) {
+    return res.status(401).json({ error: 'não autorizado' });
+  }
+  const db = getPrisma();
+  try {
+    const p = liberarLeadsDoDia(db, { lista: req.body?.lista });
+    if (req.waitUntil) { req.waitUntil(p); return res.json({ ok: true, agendado: true }); }
+    res.json({ ok: true, ...(await p) });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

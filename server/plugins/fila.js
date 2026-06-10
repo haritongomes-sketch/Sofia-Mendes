@@ -48,6 +48,15 @@ function parseTags(tagsJson) {
   try { return JSON.parse(tagsJson || '[]'); } catch { return []; }
 }
 
+// Nome da lista guardado como tag `lista:<nome>` (sem migração de schema).
+function nomeListaLimpo(v) {
+  return String(v == null ? '' : v).replace(/[\r\n"]/g, ' ').trim().slice(0, 60);
+}
+function extrairLista(tagsJson) {
+  const t = parseTags(tagsJson).find(x => x.startsWith('lista:'));
+  return t ? t.slice(6) : '(sem lista)';
+}
+
 function hojeBR() {
   const p = partesBR(new Date());
   const pad = (n) => String(n).padStart(2, '0');
@@ -60,10 +69,13 @@ function hojeBR() {
  * Importa uma lista de leads para a FILA (sem disparar a Sofia).
  * @param {PrismaClient} prisma
  * @param {Array<object>} linhas  objetos com pelo menos { nome, whatsapp }
- * @returns {{ importados, duplicados, invalidos, detalhes }}
+ * @param {object} [opts]
+ * @param {string} [opts.lista]  nome da lista/segmento (ex.: "Leads do Futebol")
+ * @returns {{ importados, duplicados, invalidos, lista, detalhes }}
  */
-async function importarLeads(prisma, linhas) {
+async function importarLeads(prisma, linhas, opts = {}) {
   const agora = new Date().toISOString();
+  const lista = nomeListaLimpo(opts.lista);
   let importados = 0, duplicados = 0, invalidos = 0;
   const detalhes = [];
   const vistosNoLote = new Set();
@@ -98,7 +110,7 @@ async function importarLeads(prisma, linhas) {
           perfil:     String(raw.perfil || 'Moderado').trim() || 'Moderado',
           estagio:    'fila',
           origem:     'Importação',
-          tags:       JSON.stringify([`importado:${agora}`])
+          tags:       JSON.stringify(lista ? [`importado:${agora}`, `lista:${lista}`] : [`importado:${agora}`])
         }
       });
       importados++; detalhes.push({ nome, whatsapp, status: 'importado' });
@@ -111,8 +123,8 @@ async function importarLeads(prisma, linhas) {
     }
   }
 
-  console.log(`[Fila] Importação: ${importados} novos, ${duplicados} duplicados, ${invalidos} inválidos`);
-  return { importados, duplicados, invalidos, detalhes };
+  console.log(`[Fila] Importação${lista ? ` "${lista}"` : ''}: ${importados} novos, ${duplicados} duplicados, ${invalidos} inválidos`);
+  return { importados, duplicados, invalidos, lista: lista || null, detalhes };
 }
 
 // ─── Liberação drip ───────────────────────────────────────────────────────────
@@ -142,9 +154,12 @@ async function dispararAbertura(prisma, lead, today) {
 /**
  * Libera até a cota diária restante de leads da fila (FIFO) e dispara a abertura.
  * Idempotente no dia: conta quem já foi liberado hoje (tag drip:<data>) e só
- * completa o que falta para MAX_LEADS_DIA.
+ * completa o que falta para MAX_LEADS_DIA (cota GLOBAL, independente da lista).
+ * @param {object} [opts]
+ * @param {string} [opts.lista]  se informado, libera só desta lista (FIFO interna)
  */
-async function liberarLeadsDoDia(prisma) {
+async function liberarLeadsDoDia(prisma, opts = {}) {
+  const lista = nomeListaLimpo(opts.lista);
   const today = hojeBR();
   const liberadosHoje = await prisma.lead.count({ where: { tags: { contains: `drip:${today}` } } });
   const vagas = Math.max(0, MAX_LEADS_DIA - liberadosHoje);
@@ -153,8 +168,10 @@ async function liberarLeadsDoDia(prisma) {
     return { liberados: 0, liberadosHoje, max: MAX_LEADS_DIA, motivo: 'cota_atingida' };
   }
 
+  const where = { estagio: 'fila', cessarContato: false };
+  if (lista) where.tags = { contains: JSON.stringify(`lista:${lista}`) }; // token exato "lista:<nome>"
   const fila = await prisma.lead.findMany({
-    where: { estagio: 'fila', cessarContato: false },
+    where,
     orderBy: { createdAt: 'asc' }, // FIFO: importação mais antiga primeiro
     take: vagas
   });
@@ -187,4 +204,36 @@ async function statusFila(prisma) {
   return { naFila, liberadosHoje, restanteHoje, max: MAX_LEADS_DIA, diasUteisParaEsvaziar };
 }
 
-module.exports = { importarLeads, liberarLeadsDoDia, statusFila, MAX_LEADS_DIA, normalizarWhatsapp, normalizarNicho };
+// ─── Listas (segmentação por importação) ──────────────────────────────────────
+
+const ESTAGIOS_REUNIAO   = ['reuniao', 'confirmado'];
+const ESTAGIOS_ENCERRADO = ['sem_interesse', 'cessado'];
+
+/**
+ * Agrega os leads por lista (tag `lista:<nome>`), com contagens por situação.
+ * Retorna array ordenado por leads na fila (desc) e nome.
+ */
+async function listarListas(prisma) {
+  const today = hojeBR();
+  const leads = await prisma.lead.findMany({ select: { estagio: true, tags: true } });
+
+  const mapa = new Map(); // nome → contadores
+  for (const l of leads) {
+    const nome = extrairLista(l.tags);
+    if (!mapa.has(nome)) mapa.set(nome, { nome, total: 0, naFila: 0, ativos: 0, reunioes: 0, encerrados: 0, liberadosHoje: 0 });
+    const c = mapa.get(nome);
+    c.total++;
+    if (l.estagio === 'fila')                       c.naFila++;
+    else if (ESTAGIOS_REUNIAO.includes(l.estagio))  c.reunioes++;
+    else if (ESTAGIOS_ENCERRADO.includes(l.estagio)) c.encerrados++;
+    else                                            c.ativos++;
+    if (String(l.tags || '').includes(`drip:${today}`)) c.liberadosHoje++;
+  }
+
+  return [...mapa.values()].sort((a, b) => (b.naFila - a.naFila) || a.nome.localeCompare(b.nome));
+}
+
+module.exports = {
+  importarLeads, liberarLeadsDoDia, statusFila, listarListas,
+  MAX_LEADS_DIA, normalizarWhatsapp, normalizarNicho
+};
