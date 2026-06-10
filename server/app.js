@@ -507,6 +507,21 @@ app.post('/api/cron/reengajamento', async (req, res) => {
   }
 });
 
+// ─── Diagnóstico da agenda (Google Calendar) ─────────────────────────────────
+// Protegido pelo CRON_SECRET (?secret= ou header x-cron-secret) p/ não expor a agenda.
+app.get('/api/agenda/diagnostico', async (req, res) => {
+  const auth = req.headers['x-cron-secret'] || req.query.secret;
+  if (auth !== (process.env.CRON_SECRET || 'altum-cron-secret')) {
+    return res.status(401).json({ error: 'não autorizado' });
+  }
+  try {
+    const { diagnostico } = require('./skills/agenda-google');
+    res.json(await diagnostico());
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ─── Analytics ────────────────────────────────────────────────────────────────
 
 app.get('/api/analytics', async (req, res) => {

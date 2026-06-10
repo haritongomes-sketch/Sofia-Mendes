@@ -107,4 +107,41 @@ async function criarEventoReuniao(lead, inicio) {
   }
 }
 
-module.exports = { proximasDuasJanelas, criarEventoReuniao };
+// Diagnóstico da integração — usado pelo endpoint /api/agenda/diagnostico.
+async function diagnostico() {
+  const cal = getCalendar();
+  const configurado = Boolean(cal && CAL_ID);
+  const out = {
+    googleConfigurado: configurado,
+    temServiceAccount: Boolean(process.env.GOOGLE_SERVICE_ACCOUNT_JSON),
+    temCalendarId: Boolean(CAL_ID),
+    calendarId: CAL_ID || null,
+    timezone: TZ
+  };
+
+  if (configurado) {
+    try {
+      const now = new Date();
+      const fb = await cal.freebusy.query({
+        requestBody: {
+          timeMin: now.toISOString(),
+          timeMax: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+          timeZone: TZ,
+          items: [{ id: CAL_ID }]
+        }
+      });
+      out.freeBusyOk = true;
+      out.ocupadosProximos7d = (fb.data.calendars?.[CAL_ID]?.busy || []).length;
+    } catch (err) {
+      out.freeBusyOk = false;
+      out.erro = err.message;
+    }
+  }
+
+  const slots = await proximasDuasJanelas(new Date());
+  out.proximasJanelas = slots.map(s => s.formatada);
+  out.fonte = (configurado && out.freeBusyOk) ? 'google_calendar' : 'fallback_calculado';
+  return out;
+}
+
+module.exports = { proximasDuasJanelas, criarEventoReuniao, diagnostico };
