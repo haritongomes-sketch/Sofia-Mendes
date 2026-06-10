@@ -4,6 +4,8 @@
  * como instrução para Sofia via system prompt.
  */
 
+const { URL_ONE_PAGER, NICHO_TO_SEG } = require('./one-pager');
+
 const OBJECOES = [
   {
     id: 'ja_tenho_assessor',
@@ -55,9 +57,17 @@ function detectarObjecao(mensagem) {
   return OBJECOES.find(o => o.triggers.some(t => msg.includes(t))) || null;
 }
 
-function gerarInstrucaoObjecao(objecao, nomeCliente) {
+function gerarInstrucaoObjecao(objecao, nomeCliente, nicho) {
   if (!objecao) return '';
-  return `\n\nINSTRUÇÃO CRÍTICA — OBJEÇÃO DETECTADA:\n${objecao.script.replace(/\[Nome\]/g, nomeCliente.split(' ')[0])}`;
+  let txt = objecao.script.replace(/\[Nome\]/g, nomeCliente.split(' ')[0]);
+  // Na objeção "manda material", anexa o link do One-Pager do segmento — condicionado
+  // ao aceite de uma conversa, mantendo a regra de não enviar lâmina genérica avulsa.
+  if (objecao.id === 'manda_material') {
+    const seg = NICHO_TO_SEG[nicho] || '';
+    const link = seg ? `${URL_ONE_PAGER}?seg=${seg}` : URL_ONE_PAGER;
+    txt += `\nLINK DO ONE-PAGER (envie SOMENTE depois que o lead aceitar uma conversa de 15 minutos — nunca como lâmina genérica avulsa): ${link}`;
+  }
+  return `\n\nINSTRUÇÃO CRÍTICA — OBJEÇÃO DETECTADA:\n${txt}`;
 }
 
 module.exports = { detectarObjecao, gerarInstrucaoObjecao, OBJECOES };

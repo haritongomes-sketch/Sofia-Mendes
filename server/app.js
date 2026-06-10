@@ -31,6 +31,8 @@ const { extrairDadosConversa } = require('./sofia');
 const { sendWhatsApp, extractPhoneFromWebhook, extractTextFromWebhook, extractMessageId, isIncomingMessage } = require('./zapi');
 const { proximasDuasJanelas, criarEventoReuniao } = require('./skills/agenda-google');
 const { partesBR, instanteBR } = require('./scheduler');
+const { htmlOnePager, URL_ONE_PAGER, NICHO_TO_SEG } = require('./skills/one-pager');
+const { obterScriptLinkedin } = require('./skills/linkedin');
 const { notificarReuniaoConfirmada } = require('./plugins/notificacao');
 const { calcularScore } = require('./plugins/scoring');
 const { executarReengajamento4Meses, executarReengajamento5Dias } = require('./plugins/reengagement');
@@ -70,6 +72,15 @@ app.get('/health', (req, res) => res.json({
   env: process.env.NODE_ENV || 'development',
   db: process.env.DATABASE_URL?.split('@')[1]?.split('/')[0] || 'local'
 }));
+
+// ─── One-Pager Executivo (material institucional público) ─────────────────────
+// Documento de 1 página que a Sofia dispara quando o lead pede material.
+// ?seg=medico|advogado|ceo|dentista|executivo (default = institucional puro).
+app.get('/api/one-pager', (req, res) => {
+  const seg = (req.query.seg || '').toString().toLowerCase().trim();
+  res.set('Content-Type', 'text/html; charset=utf-8');
+  res.send(htmlOnePager(seg));
+});
 
 // ─── Leads ────────────────────────────────────────────────────────────────────
 
@@ -412,10 +423,20 @@ app.post('/api/leads/:id/message', async (req, res) => {
         engenheiro_executivo:  'diversificação além das ações da empresa e estruturação do patrimônio acumulado'
       }[lead.nicho] || 'eficiência, proteção e diversificação do patrimônio';
 
+      // One-Pager do segmento (link real servido por GET /api/one-pager)
+      const seg = NICHO_TO_SEG[lead.nicho] || '';
+      const linkOnePager = seg ? `${URL_ONE_PAGER}?seg=${seg}` : URL_ONE_PAGER;
+      // Script estático de LinkedIn como base/few-shot (voz consistente) — toque 1 no
+      // primeiro contato, toque 2 (insight + horários) se já houve troca.
+      const baseLinkedin = obterScriptLinkedin(lead.nicho, userMsgs === 0 ? 1 : 2, lead.nome);
+
       const canalInstrucao = {
         whatsapp: 'WhatsApp Business — máximo 3 parágrafos curtos, cirúrgico e institucional. Follow-up de alto impacto: referencie o contato anterior e proponha conectar o consultor sênior, oferecendo dois horários específicos (ex.: "terça às 14h ou quinta às 10h").',
-        linkedin: 'LinkedIn — quebra de gelo institucional, máximo 4 linhas. Mapeie a atuação do lead, apresente o modelo fiduciário e ofereça dois horários (terça/quinta) para 15 minutos com o consultor sênior.',
-        email:    'E-mail — formato "Assunto: ..." + corpo de no máximo 6 linhas, tom executivo. Assunto direto (ex.: "Gestão patrimonial fiduciária // [Nome]"). Feche oferecendo dois horários específicos e assine como Sofia — Relações Institucionais, Altum Wealth.'
+        linkedin: `LinkedIn — quebra de gelo institucional, máximo 4 linhas. Mapeie a atuação do lead, apresente o modelo fiduciário e ofereça dois horários (terça/quinta) para 15 minutos com o consultor sênior.
+Use o SCRIPT BASE abaixo como referência de voz e estrutura; adapte ao histórico do lead, não copie cru:
+"""${baseLinkedin}"""`,
+        email:    `E-mail — formato "Assunto: ..." + corpo de no máximo 6 linhas, tom executivo. Assunto direto (ex.: "Gestão patrimonial fiduciária // [Nome]"). Feche oferecendo dois horários específicos e assine como Sofia — Relações Institucionais, Altum Wealth.
+Se fizer sentido anexar material, referencie o One-Pager institucional do segmento por este link (não descreva produtos): ${linkOnePager}`
       }[canal] || 'WhatsApp';
 
       const instrucao = `Gere uma mensagem de ${canal} para ${lead.nome.split(' ')[0]} (${lead.profissao || nichoCtx.descricao}, ${lead.cidade || 'Brasil'}).

@@ -380,7 +380,7 @@ async function responder(lead, mensagemUsuario) {
 
   // Objeção
   const objecao = detectarObjecao(mensagemUsuario);
-  const instrucaoObjecao = objecao ? gerarInstrucaoObjecao(objecao, lead.nome) : '';
+  const instrucaoObjecao = objecao ? gerarInstrucaoObjecao(objecao, lead.nome, lead.nicho) : '';
 
   // Intenção de agendar
   const msgLower = mensagemUsuario.toLowerCase();

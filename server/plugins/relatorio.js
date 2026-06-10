@@ -8,6 +8,9 @@
  */
 
 const { sendWhatsApp } = require('../zapi');
+const { proximaAcaoCadencia } = require('./cadencia');
+
+const CANAL_LABEL = { linkedin: '🔗 LinkedIn', email: '✉️ E-mail', whatsapp: '💬 WhatsApp' };
 
 function startOfDay(d) { const x = new Date(d); x.setHours(0,0,0,0); return x; }
 function endOfDay(d)   { const x = new Date(d); x.setHours(23,59,59,999); return x; }
@@ -97,6 +100,29 @@ async function enviarRelatorioDiario(prisma) {
       if (ultimaMsg) linhas.push(`  "${ultimaMsg.content.slice(0, 60)}..."`);
     });
     if (leadsAtivos.length > 5) linhas.push(`  ... e mais ${leadsAtivos.length - 5} outros`);
+  }
+
+  // Toques manuais de cadência devidos hoje (LinkedIn / e-mail) — WhatsApp é automático
+  const toquesManuais = [];
+  for (const l of leads) {
+    const acao = proximaAcaoCadencia(l);
+    if (acao && acao.canal !== 'whatsapp') toquesManuais.push({ lead: l, acao });
+  }
+  // Atrasados primeiro, depois por dia da régua
+  toquesManuais.sort((a, b) =>
+    (b.acao.atrasada - a.acao.atrasada) || (a.acao.dia - b.acao.dia));
+
+  linhas.push(``);
+  linhas.push(`*✋ Toques manuais de hoje (${toquesManuais.length})*`);
+  if (toquesManuais.length === 0) {
+    linhas.push(`Nenhum toque manual pendente.`);
+  } else {
+    toquesManuais.slice(0, 8).forEach(({ lead, acao }) => {
+      const flag = acao.atrasada ? ' ⚠️' : '';
+      linhas.push(`• ${CANAL_LABEL[acao.canal] || acao.canal} — *${lead.nome}*${flag}`);
+      linhas.push(`  ${acao.acao}`);
+    });
+    if (toquesManuais.length > 8) linhas.push(`  ... e mais ${toquesManuais.length - 8} outros`);
   }
 
   linhas.push(``);

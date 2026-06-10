@@ -8,6 +8,10 @@
  *
  * Cada toque usa ângulo diferente para não parecer spam.
  * Leads que respondem saem da cadência de follow-up e entram no fluxo normal.
+ *
+ * NOTA: estes 4 toques de WhatsApp são a parte AUTOMÁTICA da régua multicanal.
+ * A régua completa (incluindo os toques manuais de LinkedIn/e-mail) é a fonte de
+ * verdade em ./cadencia.js (REGUA) — os timings T1–T4 abaixo espelham aquela régua.
  */
 
 const Anthropic = require('@anthropic-ai/sdk');
