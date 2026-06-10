@@ -21,6 +21,7 @@ async function notificarReuniaoConfirmada(lead, reuniao) {
   if (!haritonWA) return;
 
   const dataFormatada = new Date(reuniao.data).toLocaleString('pt-BR', {
+    timeZone: 'America/Sao_Paulo',
     weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit'
   });
 

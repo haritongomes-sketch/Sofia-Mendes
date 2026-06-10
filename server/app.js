@@ -29,6 +29,7 @@ const sofia = require('./sofia');
 const { extrairDadosConversa } = require('./sofia');
 const { sendWhatsApp, extractPhoneFromWebhook, extractTextFromWebhook, extractMessageId, isIncomingMessage } = require('./zapi');
 const { proximasDuasJanelas, criarEventoReuniao } = require('./skills/agenda-google');
+const { partesBR, instanteBR } = require('./scheduler');
 const { notificarReuniaoConfirmada } = require('./plugins/notificacao');
 const { calcularScore } = require('./plugins/scoring');
 const { executarReengajamento4Meses, executarReengajamento5Dias } = require('./plugins/reengagement');
@@ -432,8 +433,9 @@ Gere SOMENTE o texto da mensagem, sem explicação.`;
 
 app.get('/api/meetings/today', async (req, res) => {
   const db = getPrisma();
-  const hoje = new Date();
-  const start = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
+  // Dia em horário de Brasília (servidor roda em UTC)
+  const p = partesBR(new Date());
+  const start = instanteBR(p.ano, p.mes, p.dia, 0);
   const end   = new Date(start.getTime() + 86400000);
   const reunioes = await db.reuniao.findMany({
     where: { data: { gte: start, lt: end }, status: 'agendada' },

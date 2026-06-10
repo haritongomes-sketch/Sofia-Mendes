@@ -2,7 +2,7 @@
  * Templates de abertura — Scripts Validados Private Banking
  *
  * Estrutura validada (4 elementos obrigatórios):
- *  1. "Olá, [nome]! Tudo bem? Me chamo Sofia Mendes, sou do time de Private Banking..."
+ *  1. "Olá, [nome]! Me chamo Sofia Mendes, sou do time de Private Banking..."
  *  2. Gancho de INDICAÇÃO — prova social imediata
  *  3. Espelhamento do perfil + ângulo de valor (mercado / proteção / oportunidade)
  *  4. CTA: "15 minutos" + "Sem compromisso" + emoji
@@ -21,7 +21,7 @@ const TEMPLATES = {
       // Variante A — Ângulo: movimentações de mercado (SCRIPT VALIDADO 1)
       id: 'u_a',
       texto: (nome, cidade) =>
-        `Olá, ${nome}! Tudo bem? Me chamo Sofia Mendes, sou do time de Private Banking da Altum Wealth, aqui de São Paulo. Chego até você com uma indicação de alguém que admira muito o que você construiu — e por isso quis nos conectar.
+        `Olá, ${nome}! Me chamo Sofia Mendes, sou do time de Private Banking da Altum Wealth, aqui de São Paulo. Chego até você com uma indicação de alguém que admira muito o que você construiu — e por isso quis nos conectar.
 
 Sei que seu tempo é valioso, então vou ser direta: estamos trabalhando com um perfil muito específico de pessoas${cidade ? ` em ${cidade}` : ''} que, como você, chegaram a um patrimônio expressivo por conta própria. Há algumas movimentações no mercado que têm gerado oportunidades pouco convencionais para esse perfil — e achei que faria sentido você saber.
 
@@ -31,7 +31,7 @@ Teria 15 minutos essa semana para uma conversa rápida? Sem compromisso nenhum, 
       // Variante B — Ângulo: crescimento inteligente e proteção (SCRIPT VALIDADO 2)
       id: 'u_b',
       texto: (nome) =>
-        `Olá, ${nome}! Tudo bem? Me chamo Sofia Mendes, sou do time Private Banking da Altum Wealth. Seu nome chegou até mim por meio de uma indicação, e fiquei curiosa para conhecer um pouco mais sobre seus planos.
+        `Olá, ${nome}! Me chamo Sofia Mendes, sou do time Private Banking da Altum Wealth. Seu nome chegou até mim por meio de uma indicação, e fiquei curiosa para conhecer um pouco mais sobre seus planos.
 
 Trabalho com pessoas que, assim como você, construíram um patrimônio relevante com muito esforço — e que agora querem garantir que ele continue crescendo de forma inteligente e protegida, independentemente do que aconteça no cenário econômico.
 
@@ -41,7 +41,7 @@ Teria 15 minutos esta semana para uma conversa rápida? Sem compromisso, apenas 
       // Variante C — Ângulo: próximo passo (diversificação / segunda opinião)
       id: 'u_c',
       texto: (nome, cidade) =>
-        `Olá, ${nome}! Tudo bem? Aqui é a Sofia Mendes, do time de Private Banking da Altum Wealth. Seu nome chegou até mim por uma indicação de alguém que te conhece bem — e me deu curiosidade entender melhor o seu momento.
+        `Olá, ${nome}! Aqui é a Sofia Mendes, do time de Private Banking da Altum Wealth. Seu nome chegou até mim por uma indicação de alguém que te conhece bem — e me deu curiosidade entender melhor o seu momento.
 
 Trabalho com um grupo bastante específico de pessoas${cidade ? ` em ${cidade}` : ''} que construíram patrimônio relevante e estão pensando no próximo passo — seja proteção, diversificação ou simplesmente uma segunda opinião independente sobre o que já têm.
 
@@ -51,7 +51,7 @@ Teria 15 minutos essa semana para uma conversa rápida? Sem nenhum compromisso �
       // Variante D — Ângulo: perfil seletivo + advisory independente
       id: 'u_d',
       texto: (nome) =>
-        `Olá, ${nome}! Tudo bem? Me chamo Sofia Mendes, sou do time de Private Banking da Altum Wealth, de São Paulo. Recebi seu contato por indicação e — sendo direta — não trabalhamos com todos os perfis, mas o seu chamou a atenção do Hariton Andrade.
+        `Olá, ${nome}! Me chamo Sofia Mendes, sou do time de Private Banking da Altum Wealth, de São Paulo. Recebi seu contato por indicação e — sendo direta — não trabalhamos com todos os perfis, mas o seu chamou a atenção do Hariton Andrade.
 
 Ele é advisor independente, sem comissão de produto. Trabalha com quem construiu patrimônio por conta própria e quer uma visão honesta sobre o cenário — sem os conflitos de interesse dos grandes bancos.
 
@@ -67,7 +67,7 @@ Teria 15 minutos essa semana para uma conversa rápida? Nada de pitch, só para 
     {
       id: 'mc_a',
       texto: (nome, cidade) =>
-        `Olá, Dr(a). ${nome}! Tudo bem? Me chamo Sofia Mendes, sou do time de Private Banking da Altum Wealth. Seu nome chegou até mim por indicação — e o Hariton Andrade pediu especificamente para que eu entrasse em contato.
+        `Olá, Dr(a). ${nome}! Me chamo Sofia Mendes, sou do time de Private Banking da Altum Wealth. Seu nome chegou até mim por indicação — e o Hariton Andrade pediu especificamente para que eu entrasse em contato.
 
 Trabalhamos com médicos especialistas${cidade ? ` em ${cidade}` : ''} que construíram patrimônio expressivo e querem que ele esteja de fato protegido — com a separação jurídica correta entre a atividade profissional e o patrimônio pessoal. É algo que poucos bancos tradicionais sequer mencionam.
 
@@ -76,7 +76,7 @@ Teria 15 minutos essa semana para uma conversa rápida com o Hariton? Sem compro
     {
       id: 'mc_b',
       texto: (nome) =>
-        `Olá, Dr(a). ${nome}! Tudo bem? Aqui é a Sofia Mendes, do Private Banking da Altum Wealth. Chego até você por indicação — e fiquei curiosa para entender melhor o seu cenário.
+        `Olá, Dr(a). ${nome}! Aqui é a Sofia Mendes, do Private Banking da Altum Wealth. Chego até você por indicação — e fiquei curiosa para entender melhor o seu cenário.
 
 Trabalho com médicos especialistas que, como você, construíram patrimônio relevante ao longo da carreira — e que agora querem garantir que ele esteja protegido e trabalhando com eficiência, independentemente do que aconteça.
 
@@ -88,7 +88,7 @@ Teria 15 minutos esta semana para uma conversa rápida? Sem compromisso, só par
     {
       id: 'at_a',
       texto: (nome) =>
-        `Olá, Dr(a). ${nome}! Tudo bem? Me chamo Sofia Mendes, sou do time de Private Banking da Altum Wealth. Seu nome chegou até mim por indicação — e, sendo direta, advogados tributaristas têm um perfil muito específico que o Hariton Andrade gosta de atender.
+        `Olá, Dr(a). ${nome}! Me chamo Sofia Mendes, sou do time de Private Banking da Altum Wealth. Seu nome chegou até mim por indicação — e, sendo direta, advogados tributaristas têm um perfil muito específico que o Hariton Andrade gosta de atender.
 
 Você estrutura o patrimônio dos seus clientes com perfeição. A pergunta que o Hariton queria te fazer é: e o seu próprio? Com a Lei 14.754/2023, quem não revisou a estrutura pode estar pagando mais do que deveria.
 
@@ -100,7 +100,7 @@ Teria 15 minutos essa semana para uma conversa rápida? Sem compromisso nenhum. 
     {
       id: 'ce_a',
       texto: (nome, cidade) =>
-        `Olá, ${nome}! Tudo bem? Me chamo Sofia Mendes, sou do time de Private Banking da Altum Wealth, aqui de São Paulo. Chego até você por indicação de alguém que conhece bem o que você construiu.
+        `Olá, ${nome}! Me chamo Sofia Mendes, sou do time de Private Banking da Altum Wealth, aqui de São Paulo. Chego até você por indicação de alguém que conhece bem o que você construiu.
 
 Trabalhamos com empresários${cidade ? ` em ${cidade}` : ''} que chegaram a um patrimônio expressivo — e que agora querem garantir que ele esteja diversificado e protegido, separado dos riscos da empresa. Há movimentações no mercado cambial e fiscal que têm gerado janelas relevantes para esse perfil.
 
@@ -112,7 +112,7 @@ Teria 15 minutos essa semana para uma conversa rápida? Sem compromisso — só 
     {
       id: 'de_a',
       texto: (nome, cidade) =>
-        `Olá, Dr(a). ${nome}! Tudo bem? Me chamo Sofia Mendes, sou do time de Private Banking da Altum Wealth. Seu nome chegou até mim por indicação — e fiquei curiosa para entender mais sobre o seu momento.
+        `Olá, Dr(a). ${nome}! Me chamo Sofia Mendes, sou do time de Private Banking da Altum Wealth. Seu nome chegou até mim por indicação — e fiquei curiosa para entender mais sobre o seu momento.
 
 Trabalhamos com especialistas da saúde${cidade ? ` em ${cidade}` : ''} que construíram patrimônio relevante e querem que ele esteja trabalhando com mais eficiência e proteção — muito além do que os bancos tradicionais costumam oferecer.
 
@@ -124,7 +124,7 @@ Teria 15 minutos essa semana para uma conversa rápida? Sem compromisso nenhum. 
     {
       id: 'ee_a',
       texto: (nome) =>
-        `Olá, ${nome}! Tudo bem? Me chamo Sofia Mendes, sou do time de Private Banking da Altum Wealth. Seu nome chegou até mim por indicação — e o perfil que o Hariton Andrade atende com frequência tem muito a ver com o seu.
+        `Olá, ${nome}! Me chamo Sofia Mendes, sou do time de Private Banking da Altum Wealth. Seu nome chegou até mim por indicação — e o perfil que o Hariton Andrade atende com frequência tem muito a ver com o seu.
 
 Trabalho com executivos sênior que acumularam patrimônio expressivo — muitas vezes concentrado na empresa onde trabalham — e que precisam de uma estratégia real de diversificação antes que o momento certo passe.
 
