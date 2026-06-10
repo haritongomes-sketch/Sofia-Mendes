@@ -1,5 +1,5 @@
 /**
- * Skill: One-Pager Executivo Institucional — Altum Wealth
+ * Skill: One-Pager Executivo Institucional — Private Wealth
  *
  * Fonte de verdade do documento de uma página que a Sofia dispara quando o lead
  * pede "manda material". Gera HTML autocontido (CSS inline, sem dependências),
@@ -99,7 +99,7 @@ function htmlOnePager(seg) {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Altum Wealth — Gestão Patrimonial Fiduciária</title>
+<title>Private Wealth — Gestão Patrimonial Fiduciária</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   :root {
@@ -223,8 +223,8 @@ function htmlOnePager(seg) {
   <div class="page">
     <header>
       <div class="brand">
-        <span class="mark">Altum<span>·</span>Wealth</span>
-        <span class="sub">Private Wealth Management</span>
+        <span class="mark">CRM <em style="font-style:italic;font-weight:400">Private Wealth</em></span>
+        <span class="sub">Gestão Patrimonial Independente</span>
       </div>
       <p class="tagline">Gestão patrimonial fiduciária e independente.</p>
     </header>
@@ -248,14 +248,14 @@ ${segmentoHtml}
       <div class="assinatura">
         <div class="nome">Sofia Mendes</div>
         <div class="cargo">Relações Institucionais</div>
-        <div class="org">Altum Wealth</div>
+        <div class="org">Private Wealth</div>
       </div>
     </footer>
 
     <p class="legal">Este documento tem caráter exclusivamente institucional e informativo. Não constitui
     oferta, recomendação de investimento, promessa ou garantia de rentabilidade. Estruturas patrimoniais,
     tributárias e internacionais estão sujeitas à análise individual de adequação e à legislação vigente.
-    Altum Wealth — assessoria de investimentos independente, modelo fiduciário fee-based.</p>
+    Assessoria de investimentos independente, modelo fiduciário fee-based.</p>
   </div>
 </body>
 </html>`;

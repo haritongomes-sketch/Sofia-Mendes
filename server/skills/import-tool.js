@@ -16,7 +16,7 @@ function htmlImportTool() {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Listas de Leads — Altum / Sofia</title>
+<title>Listas de Leads — CRM Private Wealth</title>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
@@ -74,7 +74,7 @@ function htmlImportTool() {
 <body>
 <div class="wrap">
   <header>
-    <div class="mark">Altum<span>·</span>Wealth</div>
+    <div class="mark">CRM <em style="font-style:italic;font-weight:400">Private Wealth</em></div>
     <div class="sub">Listas de Leads — Fila da Sofia</div>
   </header>
 
