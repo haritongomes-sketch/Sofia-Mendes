@@ -17,7 +17,7 @@
 
 const SCRIPTS_LINKEDIN = {
   medico_cirurgiao: {
-    convite: 'Dr(a). {nome}, acompanho profissionais da sua área que construíram patrimônio relevante e raramente têm tempo de estruturá-lo. Trabalho com Relações Institucionais  e gostaria de conectar.',
+    convite: 'Dr(a). {nome}, acompanho profissionais da sua área que construíram patrimônio relevante e raramente têm tempo de estruturá-lo. Trabalho com Relações Institucionais e gostaria de conectar.',
     1: `{nome}, obrigada por aceitar. Sou Sofia Mendes, das Relações Institucionais — trabalho com Hariton Andrade, advisor independente no modelo fiduciário (sem comissão de produto).
 Atendemos médicos que chegaram a um patrimônio expressivo, mas cujo capital ainda não tem a mesma estrutura de proteção que a carreira tem. Hoje você concentra tudo no Brasil ou já tem alguma diversificação internacional?`,
     2: `{nome}, um ponto que vejo com frequência no seu perfil: o volume de processos contra médicos especialistas cresceu de forma relevante — e patrimônio sem separação entre pessoa física e atividade profissional fica exposto a um risco que nunca aparece no extrato.
@@ -27,7 +27,7 @@ Vou deixar a porta aberta: quando quiser uma segunda opinião independente sobre
   },
 
   advogado_tributarista: {
-    convite: '{nome}, você estrutura patrimônio complexo com maestria todos os dias. Trabalho com Relações Institucionais , no modelo fiduciário independente, e seria um prazer conectar.',
+    convite: '{nome}, você estrutura patrimônio complexo com maestria todos os dias. Trabalho com Relações Institucionais, no modelo fiduciário independente, e seria um prazer conectar.',
     1: `{nome}, obrigada pela conexão. Sou Sofia Mendes, das Relações Institucionais — atuo com Hariton Andrade, advisor independente, modelo fiduciário sem comissão de produto.
 É comum ver tributaristas que organizam o patrimônio dos clientes com perfeição e deixam o próprio em segundo plano. Hoje você estrutura o seu via pessoa física mesmo ou já tem holding/offshore?`,
     2: `{nome}, desde a Lei 14.754/2023 a Receita mudou as regras para offshore de pessoa física — estruturas antigas ou mal declaradas podem estar gerando tributação desnecessária, ou pior, risco fiscal.
@@ -37,7 +37,7 @@ Fica o convite em aberto: quando fizer sentido revisar a sua estrutura pessoal c
   },
 
   ceo_empresario: {
-    convite: '{nome}, admiro o que você construiu. Trabalho com Relações Institucionais  — modelo fiduciário independente — com empresários que pensam a proteção do patrimônio pessoal. Vamos conectar?',
+    convite: '{nome}, admiro o que você construiu. Trabalho com Relações Institucionais — modelo fiduciário independente — com empresários que pensam a proteção do patrimônio pessoal. Vamos conectar?',
     1: `{nome}, obrigada por aceitar. Sou Sofia Mendes, das Relações Institucionais — trabalho com Hariton Andrade, advisor independente, remuneração 100% alinhada ao cliente, sem comissão de produto.
 Quem constrói uma empresa raramente constrói, em paralelo, a estrutura que protege o patrimônio pessoal. Hoje, que percentual do seu patrimônio você diria que está fora do Brasil?`,
     2: `{nome}, empresários que moveram 20–30% do patrimônio para fora do Brasil nos últimos anos preservaram poder de compra real enquanto o câmbio oscilava — os que esperaram seguem esperando o momento certo.

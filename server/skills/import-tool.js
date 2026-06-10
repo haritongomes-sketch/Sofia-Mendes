@@ -150,8 +150,8 @@ function htmlImportTool() {
   let LEADS = [];
 
   // Chave compartilhada
-  $('secret').value = localStorage.getItem('altum_cron_secret') || '';
-  $('secret').addEventListener('input', e => localStorage.setItem('altum_cron_secret', e.target.value));
+  $('secret').value = localStorage.getItem('crm_cron_secret') || '';
+  $('secret').addEventListener('input', e => localStorage.setItem('crm_cron_secret', e.target.value));
 
   // ── Abas ──
   document.querySelectorAll('.tab').forEach(t => t.onclick = () => {

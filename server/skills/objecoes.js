@@ -11,7 +11,7 @@ const OBJECOES = [
     id: 'ja_tenho_assessor',
     triggers: ['já tenho', 'tenho assessor', 'tenho gerente', 'meu banco', 'minha corretora', 'satisfeito com'],
     script: `OBJEÇÃO: "Já tenho assessor/banco"
-SCRIPT DA SOFIA: Que bom, [Nome]! A não concorre com seu assessor atual — atuamos como uma auditoria fiduciária independente. É um segundo olhar estratégico, sem compromisso. Muitos clientes mantêm seus bancos e usam a para o que eles não oferecem: independência total e acesso a mercados internacionais.`
+SCRIPT DA SOFIA: Que bom, [Nome]! Não concorremos com seu assessor atual — atuamos como uma auditoria fiduciária independente. É um segundo olhar estratégico, sem compromisso. Muitos clientes mantêm seus bancos e nos procuram para o que eles não oferecem: independência total e acesso a mercados internacionais.`
   },
   {
     id: 'rentabilidade',

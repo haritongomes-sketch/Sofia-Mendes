@@ -1,7 +1,7 @@
 {
-  "name": "private-crm-altum",
+  "name": "private-crm",
   "version": "2.0.0",
-  "description": "Sofia WhatsApp Agent + Private CRM — Altum Wealth",
+  "description": "Sofia WhatsApp Agent + Private CRM",
   "main": "server/index.js",
   "scripts": {
     "start": "node server/index.js",
