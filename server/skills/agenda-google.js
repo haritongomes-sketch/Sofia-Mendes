@@ -19,10 +19,25 @@ const TZ      = BR_TZ;
 // Aceita a chave em JSON cru (GOOGLE_SERVICE_ACCOUNT_JSON) ou base64
 // (GOOGLE_SERVICE_ACCOUNT_B64) — o base64 evita problemas de quebra de linha no painel.
 function getRawCreds() {
+  const candidatos = [];
   const b64 = (process.env.GOOGLE_SERVICE_ACCOUNT_B64 || '').trim();
-  if (b64) return Buffer.from(b64, 'base64').toString('utf8');
+  if (b64) {
+    const buf = Buffer.from(b64, 'base64');
+    candidatos.push(buf.toString('utf8'));     // caso normal
+    candidatos.push(buf.toString('utf16le'));  // caso o arquivo original fosse UTF-16 (Windows)
+  }
   const json = (process.env.GOOGLE_SERVICE_ACCOUNT_JSON || '').trim();
-  return json || null;
+  if (json) candidatos.push(json);
+
+  // Escolhe a interpretação que de fato parece JSON: corta a partir do primeiro "{"
+  // (descarta BOM / lixo inicial de encoding) e exige um "}" no fim.
+  for (const c of candidatos) {
+    if (!c) continue;
+    const i = c.indexOf('{');
+    const j = c.lastIndexOf('}');
+    if (i >= 0 && j > i) return c.slice(i, j + 1);
+  }
+  return candidatos.find(Boolean) || null;
 }
 
 let _calendar = null;
