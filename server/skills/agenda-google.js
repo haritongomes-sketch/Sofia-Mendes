@@ -11,10 +11,10 @@
  * e fica plugável assim que as credenciais forem adicionadas.
  */
 
-const { proximasJanelas, formatarDataBR } = require('../scheduler');
+const { proximasJanelas, formatarDataBR, gerarCandidatosBR, BR_TZ } = require('../scheduler');
 
 const CAL_ID = process.env.GOOGLE_CALENDAR_ID;
-const TZ      = process.env.TZ || 'America/Sao_Paulo';
+const TZ      = BR_TZ;
 
 let _calendar = null;
 function getCalendar() {
@@ -38,26 +38,6 @@ function getCalendar() {
   }
 }
 
-// Gera candidatos puros (sem DB) para filtrar via freeBusy
-function gerarCandidatos(apartirDe, dias = 21) {
-  const HORAS = [10, 14, 16];
-  const out = [];
-  for (let d = 0; d <= dias; d++) {
-    const dia = new Date(apartirDe);
-    dia.setDate(dia.getDate() + d);
-    const dow = dia.getDay();
-    if (dow === 0 || dow === 6) continue;
-    for (const h of HORAS) {
-      const inicio = new Date(dia);
-      inicio.setHours(h, 0, 0, 0);
-      if (inicio <= apartirDe) continue;
-      const fim = new Date(inicio.getTime() + 30 * 60 * 1000);
-      out.push({ inicio, fim });
-    }
-  }
-  return out;
-}
-
 function colide(cand, busy) {
   const bStart = new Date(busy.start);
   const bEnd   = new Date(busy.end);
@@ -69,7 +49,7 @@ async function proximasDuasJanelas(apartirDe = new Date()) {
   if (!cal) return proximasJanelas(2, apartirDe); // fallback compute
 
   try {
-    const candidatos = gerarCandidatos(apartirDe, 21);
+    const candidatos = gerarCandidatosBR(apartirDe, 21);
     if (!candidatos.length) return proximasJanelas(2, apartirDe);
 
     const timeMin = candidatos[0].inicio.toISOString();
