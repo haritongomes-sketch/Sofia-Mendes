@@ -1,7 +1,13 @@
-# Guia de Operação — CRM Sofia (Altum Wealth)
+# Guia de Operação — CRM Sofia (Wealth)
 
 Guia prático do dia a dia. O sistema é automático: você cadastra leads, a Sofia conduz
 a conversa no WhatsApp, qualifica, agenda na agenda real do Hariton e te avisa.
+
+**Quem é a Sofia (resumo):** Assistente Private Banking da **Wealth**, representando o
+consultor sênior Hariton Andrade. Tom soft selling, consultivo e humano. Ela **nunca
+admite ser uma IA**, não fala de taxas/produtos, não cita valores, e conduz toda conversa
+em direção a uma reunião de 15 minutos com o Hariton. Linguagem natural, sem travessões
+nem bordões de robô.
 
 ## Links
 
@@ -68,7 +74,9 @@ No card do lead aparece o selo **👤 Atendimento humano** quando está pausado.
 
 - **Follow-up:** se o lead não responde, a Sofia faz toques de acompanhamento (24h, 72h,
   7d, 14d), cada um com ângulo diferente.
-- **Re-engajamento:** leads frios/antigos são retomados periodicamente.
+- **Nurture contínuo (~28 dias):** nenhum lead fica mais de 1 mês sem contato. Quem não
+  fechou reunião nem pediu para parar recebe um toque curto e de valor a cada ~28 dias,
+  para sempre, até responder ou agendar. O cliente se sente lembrado, sem virar spam.
 - **Relatório diário:** o Hariton recebe um resumo no WhatsApp (manhã, dias úteis).
 - **Scoring:** cada lead recebe uma nota de prioridade automaticamente.
 
@@ -106,7 +114,8 @@ conta de serviço (`sofia-agenda@sofia-agenda-499002.iam.gserviceaccount.com`).
 
 - **Máx. 2 reuniões/dia** (configurável na env `MAX_REUNIOES_DIA`).
 - Horário comercial: **dias úteis, 8h–18h (Brasília)**.
-- Público-alvo: alta renda (CEO, médico, advogado, etc.) — a Sofia adapta o discurso por
-  segmento e mantém tom executivo (sem diminutivo, sem jargão de telemarketing).
+- Público-alvo: alta renda (CEO, médico, advogado, etc.). A Sofia adapta o nível técnico
+  ao cliente (simples para leigos, estratégico para sofisticados) e mantém soft selling,
+  sem diminutivo e sem jargão de telemarketing.
 - Cadastre poucos leads de cada vez no começo para acompanhar as primeiras conversas e
   validar o tom antes de escalar o volume.
