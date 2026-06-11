@@ -21,41 +21,41 @@ const TEMPLATES = {
       // Variante A — Ângulo: movimentações de mercado (SCRIPT VALIDADO 1)
       id: 'u_a',
       texto: (nome, cidade) =>
-        `Oi ${nome}! Aqui é a Sofia, da Wealth${cidade ? `, falo de São Paulo` : ''}. Cheguei até você por indicação.
+        `Oi ${nome}! Sou a Sofia Mendes, secretária executiva do Hariton Andrade, advisor de Private Banking independente aqui na Wealth. Ele me pediu pra entrar em contato porque viu no seu perfil algo que chamou a atenção dele, e quando isso acontece costuma valer pelo menos uma conversa.
 
-A gente trabalha junto do Hariton Andrade, que ajuda quem já construiu um bom patrimônio a deixá-lo mais protegido e organizado, com total independência (a Wealth não vende produto). Tem um ponto no cenário de agora que costuma passar batido em quem tem patrimônio relevante, e é bem o tipo de coisa que ele enxerga rápido.
+O Hariton trabalha num modelo bem diferente do que banco e corretora oferecem, sem comissão de produto e sem conflito de interesse. Mas isso fica pra hora certa.
 
-Você toparia 15 minutos com o Hariton essa semana, por vídeo? Sem compromisso, só pra você ter clareza do seu caso.`
+Me conta uma coisa: como você está pensando o seu patrimônio hoje, mais no modo de deixar render ou tem alguma movimentação no radar?`
     },
     {
       // Variante B — Ângulo: crescimento inteligente e proteção (SCRIPT VALIDADO 2)
       id: 'u_b',
       texto: (nome) =>
-        `${nome}, aqui é a Sofia, da Wealth. Já te conto o motivo do contato pra não tomar seu tempo.
+        `${nome}, aqui é a Sofia Mendes, secretária executiva do Hariton Andrade, advisor de Private Banking independente na Wealth. Seu nome chegou por indicação, e o Hariton me pediu pra falar com você porque enxergou no seu perfil algo que ele costuma achar interessante.
 
-Seu nome chegou numa indicação. A gente cuida de planejamento patrimonial pra quem já construiu algo relevante, sempre de forma independente: a Wealth é paga pelo cliente, não por comissão, então não tem produto pra empurrar. O Hariton, nosso consultor sênior, costuma enxergar em 15 minutos coisas que ninguém tinha apontado pro cliente.
+A forma como ele trabalha foge bastante do que banco e corretora fazem, sem comissão e sem conflito de interesse. Mas a gente chega lá na hora certa.
 
-Topa essa conversa rápida com ele ainda essa semana? Sem compromisso.`
+Quando você pensa no seu patrimônio hoje, o que mais te ocupa a cabeça: proteger o que já construiu ou fazer ele render melhor?`
     },
     {
       // Variante C — Ângulo: próximo passo (diversificação / segunda opinião)
       id: 'u_c',
       texto: (nome, cidade) =>
-        `Olá ${nome}! Quem fala é a Sofia, da Wealth. Te escrevo por causa de uma indicação${cidade ? `, aí de ${cidade}` : ''}.
+        `Olá ${nome}! Quem fala é a Sofia Mendes, secretária executiva do Hariton Andrade, advisor de Private Banking independente na Wealth. Vim por indicação, e o Hariton me pediu pra te procurar porque alguma coisa no seu perfil chamou a atenção dele.
 
-A Wealth é um escritório independente de patrimônio. A gente desenha a estratégia sob medida e é paga pelo cliente, nunca por produto, então a leitura sai sem o viés que banco costuma ter. O Hariton, nosso consultor sênior, gosta de olhar o cenário inteiro antes de opinar, e quase sempre acha um detalhe que muda o jogo.
+O trabalho dele é bem diferente do que se vê em banco ou corretora, sem comissão de produto e sem conflito de interesse. Mas isso a gente vê com calma, na hora certa.
 
-Se fizer sentido, separo 15 minutos com ele pra um diagnóstico do seu caso, por vídeo. Tem algum horário essa semana?`
+Como anda o seu patrimônio hoje, está mais parado deixando render ou você tem mexido nele ultimamente?`
     },
     {
       // Variante D — Ângulo: perfil seletivo + advisory independente
       id: 'u_d',
       texto: (nome) =>
-        `Oi ${nome}! Aqui é a Sofia, da Wealth. Te chamo por um motivo bem específico.
+        `Oi ${nome}! Sou a Sofia Mendes, secretária executiva do Hariton Andrade, advisor de Private Banking independente na Wealth. Ele me pediu pra entrar em contato, seu nome veio numa indicação e bateu com o perfil de quem ele costuma atender.
 
-O seu nome apareceu numa indicação que fez sentido pra gente. A Wealth é um escritório independente de patrimônio, atende poucas pessoas por vez e não vende produto (a remuneração vem do cliente, não de comissão). O Hariton, nosso consultor sênior, gosta de dar uma leitura franca pra quem construiu o próprio patrimônio.
+O Hariton tem um jeito de trabalhar que não lembra banco nem corretora, sem comissão e sem conflito de interesse. Mas isso fica pra quando fizer sentido.
 
-Pensei numa conversa curta com ele, uns 15 minutos por vídeo, pra olhar o seu caso. Você teria um tempo essa semana?`
+Me diz uma coisa rápida: hoje o seu foco está mais em fazer o patrimônio render ou em deixar ele mais protegido e organizado?`
     }
   ],
 
