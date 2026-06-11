@@ -424,10 +424,11 @@ async function responder(lead, mensagemUsuario) {
     } else if (janelas.length === 1) {
       instrucaoAgendamento = `\n\nINSTRUÇÃO: O cliente quer agendar. Ofereça esta janela REALMENTE livre: ${janelas[0].formatada}. Se ele aceitar, inclua ao final exatamente: [REUNIAO_CONFIRMADA:${janelas[0].iso}]`;
     } else {
-      instrucaoAgendamento = `\n\nINSTRUÇÃO: O cliente quer agendar. Ofereça DUAS opções de janelas REALMENTE livres e peça para ele escolher uma — não invente outros horários:
+      instrucaoAgendamento = `\n\nINSTRUÇÃO: O cliente quer agendar. Ofereça SOMENTE estas duas janelas REALMENTE livres e peça para ele escolher uma. Não invente nem aceite outro horário.
 (A) ${janelas[0].formatada}
 (B) ${janelas[1].formatada}
-Quando o cliente escolher, confirme com elegância e inclua ao final EXATAMENTE o marcador correspondente à opção escolhida (com a data/hora ISO entre os colchetes): [REUNIAO_CONFIRMADA:${janelas[0].iso}] para (A) ou [REUNIAO_CONFIRMADA:${janelas[1].iso}] para (B). O cliente NÃO deve ver esse marcador no texto natural — ele é só um sinal interno.`;
+Quando ele escolher A ou B, confirme com elegância e inclua ao final EXATAMENTE o marcador da opção: [REUNIAO_CONFIRMADA:${janelas[0].iso}] para (A) ou [REUNIAO_CONFIRMADA:${janelas[1].iso}] para (B).
+Se ele propuser um dia ou horário diferente, NUNCA invente um ISO e NÃO inclua o marcador. Diga que vai checar essa disponibilidade com o Hariton e ofereça de novo as janelas acima. O marcador é interno, o cliente nunca o vê.`;
     }
   }
 

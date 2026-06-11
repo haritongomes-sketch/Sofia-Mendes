@@ -454,23 +454,31 @@ app.post('/api/webhook/whatsapp', async (req, res) => {
     }
 
     if (agendou) {
-      // Usa o horário exato escolhido pelo cliente (ISO emitido pela Sofia);
-      // se ausente/ inválido, cai na próxima janela livre.
+      // Horário escolhido (ISO emitido pela Sofia). Valida: tem que ser futuro e plausível
+      // (até ~60 dias). Se vier inválido, passado ou absurdo (ex.: ano errado), cai na
+      // próxima janela real livre, evitando gravar data furada.
+      const agoraTs = Date.now();
+      const LIMITE_FUTURO = agoraTs + 60 * 24 * 60 * 60 * 1000;
       let dataReuniao = dataReuniaoISO ? new Date(dataReuniaoISO) : null;
-      if (!dataReuniao || isNaN(dataReuniao.getTime())) {
+      const isoValido = dataReuniao && !isNaN(dataReuniao.getTime())
+        && dataReuniao.getTime() > agoraTs && dataReuniao.getTime() < LIMITE_FUTURO;
+      if (!isoValido) {
+        if (dataReuniaoISO) console.warn(`[Agenda] ISO implausível (${dataReuniaoISO}) → usando próxima janela livre`);
         const janelas = await proximasDuasJanelas(new Date());
         dataReuniao = janelas[0]?.inicio || null;
       }
       if (dataReuniao) {
-        const reuniao = await db.reuniao.create({
-          data: { leadId: lead.id, data: dataReuniao, status: 'agendada', canal: 'whatsapp' }
-        });
         updateData.estagio = 'reuniao';
         updateData.semInteresse = false;
+        // Anti-duplicata: se já existe reunião agendada, atualiza em vez de criar outra.
+        const existente = (lead.reunioes || []).find(r => r.status === 'agendada');
+        const reuniao = existente
+          ? await db.reuniao.update({ where: { id: existente.id }, data: { data: dataReuniao } })
+          : await db.reuniao.create({ data: { leadId: lead.id, data: dataReuniao, status: 'agendada', canal: 'whatsapp' } });
         // Cria evento no Google Calendar (no-op se não configurado) + notifica Hariton
         const evento = await criarEventoReuniao({ ...lead, ...updateData }, dataReuniao);
         await notificarReuniaoConfirmada({ ...lead, ...updateData }, reuniao);
-        console.log(`[Agenda] Reunião → ${lead.nome} em ${dataReuniao.toISOString()} | google=${evento.criado}`);
+        console.log(`[Agenda] Reunião → ${lead.nome} em ${dataReuniao.toISOString()} | google=${evento.criado} | ${existente ? 'atualizada' : 'criada'}`);
       }
     }
 
