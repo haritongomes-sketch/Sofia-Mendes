@@ -25,7 +25,7 @@ const REGUA = [
   { dia: 5,  canal: 'email',    toque: 'one_pager', auto: false, acao: 'Enviar One-Pager do segmento (se e-mail capturado)' },
   { dia: 7,  canal: 'whatsapp', toque: 'followup_t3', auto: true, acao: 'Toque 3 — urgência real + close presumptivo' },
   { dia: 10, canal: 'linkedin', toque: 3,          auto: false, acao: 'Mensagem 3 — breakup elegante (porta aberta)' },
-  { dia: 14, canal: 'whatsapp', toque: 'followup_t4', auto: true, acao: 'Toque 4 — despedida → sem interesse + reengajar +4 meses' }
+  { dia: 14, canal: 'whatsapp', toque: 'followup_t4', auto: true, acao: 'Toque 4: porta aberta, depois entra no nurture (toque leve a cada ~28 dias, nunca > 1 mês sem contato)' }
 ];
 
 // Estágios em que a cadência de prospecção é encerrada (lead saiu do funil de topo).

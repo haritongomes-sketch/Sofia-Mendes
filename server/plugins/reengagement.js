@@ -1,33 +1,27 @@
 /**
- * Plugin: Re-engajamento 4 meses
- * Leads marcados como "sem_interesse" recebem novo contato após 4 meses,
- * sempre com referência ao contato anterior e novo ângulo de abordagem.
- * Cessa contato definitivamente quando o lead pede opt-out.
+ * Plugin: Nurture contínuo (~28 dias)
+ * Regra de ouro: nenhum lead fica mais de ~1 mês sem contato. Qualquer lead que
+ * não recebeu nem enviou mensagem nos últimos ~28 dias (e não está agendado nem
+ * pediu opt-out) recebe um toque curto e de valor, e o ciclo se repete sempre.
+ * Mantém a função `executarReengajamento4Meses` por compatibilidade de import.
  */
 
 const { sendWhatsApp } = require('../zapi');
 const { gerarMensagemReengajamento4Meses } = require('../sofia');
 
-const QUATRO_MESES_MS = 4 * 30 * 24 * 60 * 60 * 1000; // ~120 dias
+const NURTURE_MS = 28 * 24 * 60 * 60 * 1000; // ~28 dias (nunca > 1 mês)
 
 async function executarReengajamento4Meses(prisma) {
   const agora = new Date();
-  const limite = new Date(agora.getTime() - QUATRO_MESES_MS);
+  const limite = new Date(agora.getTime() - NURTURE_MS);
 
-  // Leads sem interesse, sem cessarContato, cuja ultima interação foi há 4+ meses
-  // OU cuja reengajarEm já chegou
+  // Qualquer lead sem contato há ~28 dias, fora de estágios encerrados/agendados.
   const leads = await prisma.lead.findMany({
     include: { mensagens: { orderBy: { timestamp: 'desc' }, take: 5 } },
     where: {
-      semInteresse: true,
       cessarContato: false,
-      OR: [
-        { reengajarEm: { lte: agora } },
-        {
-          reengajarEm: null,
-          ultimaInteracao: { lte: limite }
-        }
-      ]
+      estagio: { notIn: ['reuniao', 'confirmado', 'cessado', 'fila'] },
+      ultimaInteracao: { lte: limite }
     }
   });
 
@@ -41,29 +35,28 @@ async function executarReengajamento4Meses(prisma) {
       });
       await sendWhatsApp(lead.whatsapp, mensagem);
 
-      // Próximo reengajamento daqui a 4 meses
-      const proximoReeng = new Date(agora.getTime() + QUATRO_MESES_MS);
+      // Reagenda o próximo toque para ~28 dias (ciclo perpétuo).
+      const proximo = new Date(agora.getTime() + NURTURE_MS);
       await prisma.lead.update({
         where: { id: lead.id },
         data: {
           ultimaInteracao: agora,
-          reengajarEm: proximoReeng,
-          reengajado: true,
-          estagio: 'prospeccao' // volta para prospecção ativa
+          reengajarEm: proximo,
+          reengajado: true
         }
       });
 
       enviados++;
-      console.log(`[Reeng4m] Mensagem enviada → ${lead.nome} | próximo em ${proximoReeng.toLocaleDateString('pt-BR')}`);
+      console.log(`[Nurture28d] Toque enviado → ${lead.nome} | próximo ~${proximo.toLocaleDateString('pt-BR')}`);
 
       // Espaçamento entre envios para não parecer spam
       await new Promise(r => setTimeout(r, 20000));
     } catch (err) {
-      console.error(`[Reeng4m] Erro para ${lead.nome}:`, err.message);
+      console.error(`[Nurture28d] Erro para ${lead.nome}:`, err.message);
     }
   }
 
-  console.log(`[Reeng4m] ${enviados} reengajamentos enviados`);
+  if (enviados > 0) console.log(`[Nurture28d] ${enviados} toques de nurture enviados`);
   return { enviados };
 }
 

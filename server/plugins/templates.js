@@ -21,41 +21,41 @@ const TEMPLATES = {
       // Variante A — Ângulo: movimentações de mercado (SCRIPT VALIDADO 1)
       id: 'u_a',
       texto: (nome, cidade) =>
-        `Olá, ${nome}! Sou a Sofia Mendes, assistente do Hariton Andrade — planejador financeiro e advisor independente, modelo fee-based (ele não vende produto nem recebe comissão).
+        `Oi ${nome}! Aqui é a Sofia, da Wealth${cidade ? `, falo de São Paulo` : ''}. Cheguei até você por indicação.
 
-Chego até você por indicação. O Hariton trabalha com pessoas${cidade ? ` em ${cidade}` : ''} que construíram um patrimônio relevante e querem organizá-lo melhor: proteção, diversificação internacional e eficiência tributária — com uma visão independente, fora do conflito de interesse dos bancos.
+A gente trabalha junto do Hariton Andrade, que ajuda quem já construiu um bom patrimônio a deixá-lo mais protegido e organizado, com total independência (a Wealth não vende produto). Tem um ponto no cenário de agora que costuma passar batido em quem tem patrimônio relevante, e é bem o tipo de coisa que ele enxerga rápido.
 
-A proposta é direta: 15 minutos por vídeo com ele, um diagnóstico do seu cenário, sem compromisso e sem pitch. Faz sentido conversar essa semana?`
+Você toparia 15 minutos com o Hariton essa semana, por vídeo? Sem compromisso, só pra você ter clareza do seu caso.`
     },
     {
       // Variante B — Ângulo: crescimento inteligente e proteção (SCRIPT VALIDADO 2)
       id: 'u_b',
       texto: (nome) =>
-        `Olá, ${nome}! Sou a Sofia Mendes, assistente do Hariton Andrade, planejador financeiro independente (fee-based, sem venda de produto). Seu nome chegou por indicação.
+        `${nome}, aqui é a Sofia, da Wealth. Já te conto o motivo do contato pra não tomar seu tempo.
 
-O Hariton ajuda quem construiu um patrimônio relevante a planejá-lo melhor — proteger o que já tem, diversificar e pagar menos imposto de forma legal — sem os conflitos de interesse de banco ou corretora.
+Seu nome chegou numa indicação. A gente cuida de planejamento patrimonial pra quem já construiu algo relevante, sempre de forma independente: a Wealth é paga pelo cliente, não por comissão, então não tem produto pra empurrar. O Hariton, nosso consultor sênior, costuma enxergar em 15 minutos coisas que ninguém tinha apontado pro cliente.
 
-Queria te propor uma conversa de 15 minutos com ele, por vídeo: um diagnóstico do seu momento, sem compromisso. Você teria essa semana?`
+Topa essa conversa rápida com ele ainda essa semana? Sem compromisso.`
     },
     {
       // Variante C — Ângulo: próximo passo (diversificação / segunda opinião)
       id: 'u_c',
       texto: (nome, cidade) =>
-        `Olá, ${nome}! Aqui é a Sofia Mendes, assistente do Hariton Andrade — planejador financeiro e advisor independente.
+        `Olá ${nome}! Quem fala é a Sofia, da Wealth. Te escrevo por causa de uma indicação${cidade ? `, aí de ${cidade}` : ''}.
 
-Trabalhamos com pessoas${cidade ? ` em ${cidade}` : ''} que já têm um patrimônio relevante e querem um plano claro para ele: proteção, diversificação e sucessão. Como o Hariton é remunerado pelo cliente (fee-based), a orientação é isenta — sem produto sendo empurrado.
+A Wealth é um escritório independente de patrimônio. A gente desenha a estratégia sob medida e é paga pelo cliente, nunca por produto, então a leitura sai sem o viés que banco costuma ter. O Hariton, nosso consultor sênior, gosta de olhar o cenário inteiro antes de opinar, e quase sempre acha um detalhe que muda o jogo.
 
-A ideia é objetiva: 15 minutos por vídeo com ele, um diagnóstico do seu cenário, sem compromisso. Funciona conversar essa semana?`
+Se fizer sentido, separo 15 minutos com ele pra um diagnóstico do seu caso, por vídeo. Tem algum horário essa semana?`
     },
     {
       // Variante D — Ângulo: perfil seletivo + advisory independente
       id: 'u_d',
       texto: (nome) =>
-        `Olá, ${nome}! Sou a Sofia Mendes, assistente do Hariton Andrade. Vou ser direta: ele é planejador financeiro e advisor independente (fee-based, sem comissão) e atende poucos perfis por vez — o seu chegou por indicação e faz sentido para o trabalho dele.
+        `Oi ${nome}! Aqui é a Sofia, da Wealth. Te chamo por um motivo bem específico.
 
-O Hariton cuida do planejamento patrimonial completo: proteção, diversificação internacional, eficiência tributária e sucessão — com independência total dos bancos.
+O seu nome apareceu numa indicação que fez sentido pra gente. A Wealth é um escritório independente de patrimônio, atende poucas pessoas por vez e não vende produto (a remuneração vem do cliente, não de comissão). O Hariton, nosso consultor sênior, gosta de dar uma leitura franca pra quem construiu o próprio patrimônio.
 
-Proposta clara: 15 minutos por vídeo com ele, um diagnóstico do seu cenário, sem compromisso e sem pitch. Tem disponibilidade essa semana?`
+Pensei numa conversa curta com ele, uns 15 minutos por vídeo, pra olhar o seu caso. Você teria um tempo essa semana?`
     }
   ],
 
