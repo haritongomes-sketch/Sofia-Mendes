@@ -21,11 +21,11 @@ const TEMPLATES = {
       // Variante A — Ângulo: movimentações de mercado (SCRIPT VALIDADO 1)
       id: 'u_a',
       texto: (nome, cidade) =>
-        `Oi ${nome}! Sou a Sofia Mendes, secretária executiva do Hariton Andrade, advisor de Private Banking independente aqui na Wealth. Ele me pediu pra entrar em contato porque viu no seu perfil algo que chamou a atenção dele, e quando isso acontece costuma valer pelo menos uma conversa.
+        `Oi ${nome}! Sou Sofia Mendes, secretária executiva do Hariton Andrade, advisor de Private Banking independente aqui da Wealth. Ele me pediu para entrar em contato porque identificou algo no seu perfil que chamou a atenção dele, e geralmente quando isso acontece vale a pena pelo menos uma troca.
 
-O Hariton trabalha num modelo bem diferente do que banco e corretora oferecem, sem comissão de produto e sem conflito de interesse. Mas isso fica pra hora certa.
+Hariton trabalha com um modelo bem diferente do que os bancos e corretoras oferecem, sem comissão de produto, sem conflito de interesse. Mas isso fica para a hora certa.
 
-Me conta uma coisa: como você está pensando o seu patrimônio hoje, mais no modo de deixar render ou tem alguma movimentação no radar?`
+Como você está pensando o seu patrimônio hoje, mais no modo "deixar render" ou tem alguma movimentação no radar?`
     },
     {
       // Variante B — Ângulo: crescimento inteligente e proteção (SCRIPT VALIDADO 2)
