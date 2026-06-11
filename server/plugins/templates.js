@@ -21,7 +21,7 @@ const TEMPLATES = {
       // Variante A — Ângulo: movimentações de mercado (SCRIPT VALIDADO 1)
       id: 'u_a',
       texto: (nome, cidade) =>
-        `Oi ${nome}! Sou Sofia Mendes, secretária executiva do Hariton Andrade, advisor de Private Banking independente aqui da Wealth. Ele me pediu para entrar em contato porque identificou algo no seu perfil que chamou a atenção dele, e geralmente quando isso acontece vale a pena pelo menos uma troca.
+        `Oi ${nome}! Sou Sofia Mendes, secretária executiva do Hariton Andrade, consultor e planejador financeiro. Ele me pediu para entrar em contato porque identificou algo no seu perfil que chamou a atenção dele, e geralmente quando isso acontece vale a pena pelo menos uma troca.
 
 Hariton trabalha com um modelo bem diferente do que os bancos e corretoras oferecem, sem comissão de produto, sem conflito de interesse. Mas isso fica para a hora certa.
 
@@ -31,7 +31,7 @@ Como você está pensando o seu patrimônio hoje, mais no modo "deixar render" o
       // Variante B — Ângulo: crescimento inteligente e proteção (SCRIPT VALIDADO 2)
       id: 'u_b',
       texto: (nome) =>
-        `${nome}, aqui é a Sofia Mendes, secretária executiva do Hariton Andrade, advisor de Private Banking independente na Wealth. Seu nome chegou por indicação, e o Hariton me pediu pra falar com você porque enxergou no seu perfil algo que ele costuma achar interessante.
+        `${nome}, aqui é a Sofia Mendes, secretária executiva do Hariton Andrade, consultor e planejador financeiro. Seu nome chegou por indicação, e o Hariton me pediu pra falar com você porque enxergou no seu perfil algo que ele costuma achar interessante.
 
 A forma como ele trabalha foge bastante do que banco e corretora fazem, sem comissão e sem conflito de interesse. Mas a gente chega lá na hora certa.
 
@@ -41,7 +41,7 @@ Quando você pensa no seu patrimônio hoje, o que mais te ocupa a cabeça: prote
       // Variante C — Ângulo: próximo passo (diversificação / segunda opinião)
       id: 'u_c',
       texto: (nome, cidade) =>
-        `Olá ${nome}! Quem fala é a Sofia Mendes, secretária executiva do Hariton Andrade, advisor de Private Banking independente na Wealth. Vim por indicação, e o Hariton me pediu pra te procurar porque alguma coisa no seu perfil chamou a atenção dele.
+        `Olá ${nome}! Quem fala é a Sofia Mendes, secretária executiva do Hariton Andrade, consultor e planejador financeiro. Vim por indicação, e o Hariton me pediu pra te procurar porque alguma coisa no seu perfil chamou a atenção dele.
 
 O trabalho dele é bem diferente do que se vê em banco ou corretora, sem comissão de produto e sem conflito de interesse. Mas isso a gente vê com calma, na hora certa.
 
@@ -51,7 +51,7 @@ Como anda o seu patrimônio hoje, está mais parado deixando render ou você tem
       // Variante D — Ângulo: perfil seletivo + advisory independente
       id: 'u_d',
       texto: (nome) =>
-        `Oi ${nome}! Sou a Sofia Mendes, secretária executiva do Hariton Andrade, advisor de Private Banking independente na Wealth. Ele me pediu pra entrar em contato, seu nome veio numa indicação e bateu com o perfil de quem ele costuma atender.
+        `Oi ${nome}! Sou a Sofia Mendes, secretária executiva do Hariton Andrade, consultor e planejador financeiro. Ele me pediu pra entrar em contato, seu nome veio numa indicação e bateu com o perfil de quem ele costuma atender.
 
 O Hariton tem um jeito de trabalhar que não lembra banco nem corretora, sem comissão e sem conflito de interesse. Mas isso fica pra quando fizer sentido.
 
