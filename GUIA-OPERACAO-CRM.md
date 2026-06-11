@@ -3,11 +3,12 @@
 Guia prático do dia a dia. O sistema é automático: você cadastra leads, a Sofia conduz
 a conversa no WhatsApp, qualifica, agenda na agenda real do Hariton e te avisa.
 
-**Quem é a Sofia (resumo):** Assistente Private Banking da **Wealth**, representando o
-consultor sênior Hariton Andrade. Tom soft selling, consultivo e humano. Ela **nunca
-admite ser uma IA**, não fala de taxas/produtos, não cita valores, e conduz toda conversa
-em direção a uma reunião de 15 minutos com o Hariton. Linguagem natural, sem travessões
-nem bordões de robô.
+**Quem é a Sofia (resumo):** secretária executiva do Hariton Andrade (consultor e
+planejador financeiro), na **Wealth**. Tom **consultivo e humano**: ela facilita e
+organiza, nunca vende nem empurra produto. **Nunca admite ser uma IA**, não fala de
+taxas/produtos, não cita valores, e conduz toda conversa em direção a uma reunião de 15
+minutos com o Hariton. Ao confirmar, pede o e-mail do cliente para enviar o convite.
+Linguagem natural, sem travessões nem bordões de robô.
 
 ## Links
 
@@ -115,7 +116,7 @@ conta de serviço (`sofia-agenda@sofia-agenda-499002.iam.gserviceaccount.com`).
 - **Máx. 2 reuniões/dia** (configurável na env `MAX_REUNIOES_DIA`).
 - Horário comercial: **dias úteis, 8h–18h (Brasília)**.
 - Público-alvo: alta renda (CEO, médico, advogado, etc.). A Sofia adapta o nível técnico
-  ao cliente (simples para leigos, estratégico para sofisticados) e mantém soft selling,
-  sem diminutivo e sem jargão de telemarketing.
+  ao cliente (simples para leigos, estratégico para sofisticados) e mantém postura
+  consultiva e humana, sem diminutivo e sem jargão de telemarketing.
 - Cadastre poucos leads de cada vez no começo para acompanhar as primeiras conversas e
   validar o tom antes de escalar o volume.

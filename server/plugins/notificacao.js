@@ -36,6 +36,7 @@ async function notificarReuniaoConfirmada(lead, reuniao) {
     ``,
     `📅 *Data:* ${dataFormatada}`,
     `📱 *WhatsApp:* ${lead.whatsapp}`,
+    `📧 *E-mail:* ${lead.email || 'a coletar'}`,
     ``,
     `Sofia conduziu a conversa com sucesso! Prepare-se para o diagnóstico. 💎`
   ].join('\n');
