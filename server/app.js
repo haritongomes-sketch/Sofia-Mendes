@@ -206,8 +206,13 @@ app.get('/api/leads', async (req, res) => {
 });
 
 app.post('/api/leads', async (req, res) => {
-  const { nome, whatsapp, email, nicho, regiao, patrimonio, profissao, perfil, cidade, estado, instituicoes, tags } = req.body;
+  const { nome, whatsapp, email, nicho, regiao, patrimonio, profissao, perfil, cidade, estado, instituicoes, tags, lista } = req.body;
   if (!nome || !whatsapp) return res.status(400).json({ error: 'nome e whatsapp são obrigatórios' });
+
+  // Lista opcional (ex.: "Leads do Futebol") guardada como tag lista:<nome>
+  const tagsArr = Array.isArray(tags) ? [...tags] : [];
+  const listaLimpa = (lista || '').toString().replace(/[\r\n"]/g, ' ').trim().slice(0, 60);
+  if (listaLimpa && !tagsArr.some(t => t === `lista:${listaLimpa}`)) tagsArr.push(`lista:${listaLimpa}`);
 
   const db = getPrisma();
   try {
@@ -223,7 +228,7 @@ app.post('/api/leads', async (req, res) => {
         cidade:      cidade      || '',
         estado:      estado      || '',
         instituicoes: JSON.stringify(instituicoes || []),
-        tags:         JSON.stringify(tags || [])
+        tags:         JSON.stringify(tagsArr)
       }
     });
 
