@@ -128,9 +128,14 @@ Máximo 2 parágrafos muito curtos.`
 async function executarFollowup(prisma) {
   const agora = new Date();
 
+  // Toque 1 ANCORADO NA MANHÃ: dispara na manhã seguinte à abertura (≥14h decorridas)
+  // e só entre 8h–12h (Brasília) — follow-up matinal, melhor horário para B2B.
+  const horaBR = parseInt(new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo', hour: 'numeric', hour12: false }));
+  const ehManha = horaBR >= 8 && horaBR < 12;
+
   // Janelas de tempo para cada toque
   const janelas = {
-    1: { min: horasAtras(agora, 26), max: horasAtras(agora, 22) },  // 24h ± 2h
+    1: { min: horasAtras(agora, 48), max: horasAtras(agora, 14) },  // 14–48h → manhã seguinte
     2: { min: horasAtras(agora, 78), max: horasAtras(agora, 66) },  // 72h ± 6h
     3: { min: diasAtras(agora, 8),   max: diasAtras(agora, 6)   },  // 7d ± 1d
     4: { min: diasAtras(agora, 16),  max: diasAtras(agora, 12)  }   // 14d ± 2d
@@ -169,6 +174,9 @@ async function executarFollowup(prisma) {
       }
     }
     if (!toque) continue;
+
+    // Toque 1 só sai pela manhã (8h–12h BRT). Fora desse horário, aguarda.
+    if (toque === 1 && !ehManha) continue;
 
     // Verifica se já enviou este toque (evita duplicata)
     const tagToque = `followup_t${toque}`;
