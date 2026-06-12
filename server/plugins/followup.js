@@ -125,13 +125,14 @@ Máximo 2 parágrafos muito curtos.`
 
 // ─── Executar cadência de follow-up ──────────────────────────────────────────
 
-async function executarFollowup(prisma) {
+async function executarFollowup(prisma, { force = false } = {}) {
   const agora = new Date();
 
   // Toque 1 ANCORADO NA MANHÃ: dispara na manhã seguinte à abertura (≥14h decorridas)
-  // e só entre 8h–13h (Brasília) — follow-up matinal/início da tarde, melhor horário B2B.
+  // e só entre 8h–12h (Brasília) — follow-up matinal, melhor horário para B2B.
+  // `force` (disparo manual) ignora a janela de horário e envia na hora.
   const horaBR = parseInt(new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo', hour: 'numeric', hour12: false }));
-  const ehManha = horaBR >= 8 && horaBR < 13;
+  const ehManha = force || (horaBR >= 8 && horaBR < 12);
 
   // Janelas de tempo para cada toque
   const janelas = {
@@ -213,7 +214,7 @@ async function executarFollowup(prisma) {
       console.log(`[Follow-up T${toque}] ✓ Enviado → ${lead.nome}`);
 
       // Espaçamento entre envios (anti-spam)
-      await new Promise(r => setTimeout(r, 12000));
+      await new Promise(r => setTimeout(r, 5000));
     } catch (err) {
       console.error(`[Follow-up T${toque}] Erro para ${lead.nome}:`, err.message);
     }

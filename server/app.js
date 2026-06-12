@@ -712,8 +712,10 @@ app.post('/api/cron/followup', async (req, res) => {
   if (!verificarCron(req, res)) return;
   const { executarFollowup } = require('./plugins/followup');
   const db = getPrisma();
+  // force=1 (disparo manual) ignora a janela de horário e envia na hora.
+  const force = req.query.force === '1' || req.body?.force === true;
   try {
-    const result = await executarFollowup(db);
+    const result = await executarFollowup(db, { force });
     res.json({ ok: true, enviados: result.enviados });
   } catch (err) {
     console.error('[Cron Followup]', err.message);
