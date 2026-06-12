@@ -169,7 +169,8 @@ async function executarFollowup(prisma, { force = false } = {}) {
     // Determinar qual toque enviar com base no tempo decorrido
     let toque = null;
     for (const [t, janela] of Object.entries(janelas)) {
-      if (ultimaTs >= janela.max && ultimaTs <= janela.min) {
+      // janela.min = limite mais antigo (agora-Xh) | janela.max = mais recente (agora-Yh, Y<X)
+      if (ultimaTs >= janela.min && ultimaTs <= janela.max) {
         toque = parseInt(t);
         break;
       }
