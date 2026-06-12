@@ -129,9 +129,9 @@ async function executarFollowup(prisma) {
   const agora = new Date();
 
   // Toque 1 ANCORADO NA MANHÃ: dispara na manhã seguinte à abertura (≥14h decorridas)
-  // e só entre 8h–12h (Brasília) — follow-up matinal, melhor horário para B2B.
+  // e só entre 8h–13h (Brasília) — follow-up matinal/início da tarde, melhor horário B2B.
   const horaBR = parseInt(new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo', hour: 'numeric', hour12: false }));
-  const ehManha = horaBR >= 8 && horaBR < 12;
+  const ehManha = horaBR >= 8 && horaBR < 13;
 
   // Janelas de tempo para cada toque
   const janelas = {
