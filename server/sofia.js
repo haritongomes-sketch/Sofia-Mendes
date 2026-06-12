@@ -433,6 +433,12 @@ Se ele propuser um dia ou horário diferente, NUNCA invente um ISO e NÃO inclua
     }
   }
 
+  // Idioma do cliente (tag idioma:es) — responde em espanhol quando marcado
+  const tagsLead = (() => { try { return JSON.parse(lead.tags || '[]'); } catch { return []; } })();
+  const instrucaoIdioma = tagsLead.includes('idioma:es')
+    ? '\n\nIDIOMA — INEGOCIÁVEL: Este cliente fala ESPANHOL. Responda SEMPRE em espanhol (castelhano), natural e caloroso. Mantenha todas as regras e o tom da Sofia, apenas no idioma espanhol — nunca em português.'
+    : '';
+
   // Histórico completo (últimas 20 mensagens)
   const historico = (lead.mensagens || []).slice(-20).map(m => ({
     role: m.role === 'assistant' ? 'assistant' : 'user',
@@ -444,6 +450,7 @@ Se ele propuser um dia ou horário diferente, NUNCA invente um ISO e NÃO inclua
     horario,
     instrucaoObjecao,
     instrucaoAgendamento,
+    instrucaoIdioma,
     '\n\n━━━ MENSAGEM ATUAL DE ' + lead.nome.split(' ')[0].toUpperCase() + ' ━━━\n' + mensagemUsuario
   ].filter(Boolean).join('\n');
 
