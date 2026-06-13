@@ -726,13 +726,15 @@ app.post('/api/cron/followup', async (req, res) => {
 app.post('/api/cron/reengagement', async (req, res) => {
   if (!verificarCron(req, res)) return;
   const { executarReengajamento4Meses, executarReengajamento5Dias } = require('./plugins/reengagement');
+  const { executarRecontatosProgramados } = require('./plugins/recontato');
   const db = getPrisma();
   try {
-    const [r4m, r5d] = await Promise.all([
+    const [r4m, r5d, rec] = await Promise.all([
       executarReengajamento4Meses(db),
-      executarReengajamento5Dias(db)
+      executarReengajamento5Dias(db),
+      executarRecontatosProgramados(db)
     ]);
-    res.json({ ok: true, reeng4meses: r4m.enviados, reeng5dias: r5d.enviados });
+    res.json({ ok: true, reeng4meses: r4m.enviados, reeng5dias: r5d.enviados, recontatos: rec.enviados });
   } catch (err) {
     console.error('[Cron Reengagement]', err.message);
     res.status(500).json({ error: err.message });
@@ -779,14 +781,16 @@ app.get('/api/cron/followup-vercel', async (req, res) => {
 
 app.get('/api/cron/reengagement-vercel', async (req, res) => {
   const { executarReengajamento4Meses, executarReengajamento5Dias } = require('./plugins/reengagement');
+  const { executarRecontatosProgramados } = require('./plugins/recontato');
   const db = getPrisma();
   try {
-    const [r4m, r5d] = await Promise.all([
+    const [r4m, r5d, rec] = await Promise.all([
       executarReengajamento4Meses(db),
-      executarReengajamento5Dias(db)
+      executarReengajamento5Dias(db),
+      executarRecontatosProgramados(db)
     ]);
-    console.log(`[Vercel Cron] Reeng: 4m=${r4m.enviados}, 5d=${r5d.enviados}`);
-    res.json({ ok: true, reeng4meses: r4m.enviados, reeng5dias: r5d.enviados });
+    console.log(`[Vercel Cron] Reeng: 4m=${r4m.enviados}, 5d=${r5d.enviados}, recontatos=${rec.enviados}`);
+    res.json({ ok: true, reeng4meses: r4m.enviados, reeng5dias: r5d.enviados, recontatos: rec.enviados });
   } catch (err) {
     console.error('[Vercel Cron Reengagement]', err.message);
     res.status(500).json({ error: err.message });
