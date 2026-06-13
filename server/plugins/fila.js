@@ -10,7 +10,6 @@
  * 'drip:<YYYY-MM-DD>') sobre os campos existentes.
  */
 
-const { partesBR } = require('../scheduler');
 const sofia = require('../sofia');
 const { sendWhatsApp } = require('../zapi');
 
@@ -58,9 +57,9 @@ function extrairLista(tagsJson) {
 }
 
 function hojeBR() {
-  const p = partesBR(new Date());
-  const pad = (n) => String(n).padStart(2, '0');
-  return `${p.ano}-${pad(p.mes)}-${pad(p.dia)}`;
+  // en-CA formata como YYYY-MM-DD; timeZone garante a data de Brasília.
+  // (partesBR retorna mês 0-indexado — não usar para montar string de data.)
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
 }
 
 // ─── Importação ───────────────────────────────────────────────────────────────
