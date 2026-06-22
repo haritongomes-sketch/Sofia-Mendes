@@ -166,6 +166,10 @@ async function executarFollowup(prisma, { force = false } = {}) {
     const foiSofia   = ultimaMsg.role === 'assistant';
     if (!foiSofia) continue; // Cliente respondeu — sem follow-up
 
+    // Não fazer follow-up de PROSPECÇÃO em clientes/parceiros já marcados
+    const tagsLead = parseTags(lead.tags);
+    if (tagsLead.some(t => ['cliente_xp', 'vip', 'parceiro'].includes(t))) continue;
+
     // Determinar qual toque enviar com base no tempo decorrido
     let toque = null;
     for (const [t, janela] of Object.entries(janelas)) {
