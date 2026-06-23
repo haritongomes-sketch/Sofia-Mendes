@@ -96,4 +96,79 @@ async function executarRecontatosProgramados(prisma) {
   return { enviados };
 }
 
-module.exports = { executarRecontatosProgramados, gerarMensagemRecontato, TEMAS };
+// ─── Check-in recorrente (ex.: semanal) — "precisa de algo?" ─────────────────
+
+const CHECKIN_SYSTEM = `Você é Sofia Mendes, assessora de Hariton Andrade. Envie um check-in CURTO e caloroso para um cliente: no máximo 2 frases. Pergunte se está tudo bem e se ele precisa de alguma coisa. Sem vender nada, sem produtos, sem diminutivos. Português brasileiro natural e leve.`;
+const CHECKIN_SYSTEM_ES = `Eres Sofía, asistente de Hariton Andrade. Envía un mensaje de seguimiento CORTO y cálido a un cliente: máximo 2 frases. Pregunta si todo está bien y si necesita algo. Sin vender nada, sin productos. Español natural y cercano.`;
+
+function addDias(isoDate, n) {
+  const d = new Date(isoDate + 'T12:00:00Z');
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+}
+
+async function gerarCheckin(lead) {
+  const tags = parseTags(lead.tags);
+  const es = tags.includes('idioma:es');
+  const nome = lead.nome.split(' ')[0];
+  const res = await client.messages.create({
+    model: 'claude-sonnet-4-6',
+    max_tokens: 130,
+    system: es ? CHECKIN_SYSTEM_ES : CHECKIN_SYSTEM,
+    messages: [{ role: 'user', content: `Check-in curto para ${nome} (cliente). Pergunte se está tudo bem e se precisa de alguma coisa. No máximo 2 frases.` }]
+  });
+  return res.content[0].text.trim();
+}
+
+/**
+ * Check-ins recorrentes: leads com tag `checkin:<data>` (+ `checkin_intervalo:<dias>`,
+ * default 7). Ao vencer, envia um check-in curto e reagenda para +intervalo (recorrente).
+ * Pula (mas reagenda) se houve interação nos últimos 5 dias — não atrapalha conversa ativa.
+ */
+async function executarCheckins(prisma) {
+  const h = horaBR();
+  if (h < 9 || h >= 19) return { enviados: 0, skip: 'fora_horario' };
+
+  const hoje = hojeBR();
+  const leads = await prisma.lead.findMany({ where: { cessarContato: false } });
+  let enviados = 0;
+
+  for (const lead of leads) {
+    const tags = parseTags(lead.tags);
+    const tagData = tags.find(t => t.startsWith('checkin:'));
+    if (!tagData) continue;
+    const data = tagData.slice('checkin:'.length);
+    if (data > hoje) continue;
+
+    const intervaloTag = tags.find(t => t.startsWith('checkin_intervalo:'));
+    const intervalo = parseInt(intervaloTag ? intervaloTag.split(':')[1] : '7') || 7;
+    const prox = addDias(hoje, intervalo);
+    const reagendar = (extra = {}) => prisma.lead.update({
+      where: { id: lead.id },
+      data: { tags: JSON.stringify(tags.filter(t => t !== tagData).concat(`checkin:${prox}`)), ...extra }
+    });
+
+    // Conversa ativa nos últimos 5 dias → não envia agora, só reagenda
+    if (lead.ultimaInteracao && (Date.now() - new Date(lead.ultimaInteracao).getTime()) / 86400000 < 5) {
+      await reagendar();
+      continue;
+    }
+
+    try {
+      const msg = await gerarCheckin(lead);
+      await sendWhatsApp(lead.whatsapp, msg);
+      await prisma.mensagem.create({ data: { leadId: lead.id, role: 'assistant', content: msg } });
+      await reagendar({ ultimaInteracao: new Date() });
+      enviados++;
+      console.log(`[Check-in] ✓ ${lead.nome} → próximo ${prox}`);
+      await new Promise(r => setTimeout(r, 3000));
+    } catch (err) {
+      console.error('[Check-in] erro', lead.nome, err.message);
+    }
+  }
+
+  if (enviados) console.log(`[Check-in] ${enviados} enviados`);
+  return { enviados };
+}
+
+module.exports = { executarRecontatosProgramados, executarCheckins, gerarMensagemRecontato, TEMAS };

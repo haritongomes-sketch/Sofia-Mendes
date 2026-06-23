@@ -726,15 +726,16 @@ app.post('/api/cron/followup', async (req, res) => {
 app.post('/api/cron/reengagement', async (req, res) => {
   if (!verificarCron(req, res)) return;
   const { executarReengajamento4Meses, executarReengajamento5Dias } = require('./plugins/reengagement');
-  const { executarRecontatosProgramados } = require('./plugins/recontato');
+  const { executarRecontatosProgramados, executarCheckins } = require('./plugins/recontato');
   const db = getPrisma();
   try {
-    const [r4m, r5d, rec] = await Promise.all([
+    const [r4m, r5d, rec, chk] = await Promise.all([
       executarReengajamento4Meses(db),
       executarReengajamento5Dias(db),
-      executarRecontatosProgramados(db)
+      executarRecontatosProgramados(db),
+      executarCheckins(db)
     ]);
-    res.json({ ok: true, reeng4meses: r4m.enviados, reeng5dias: r5d.enviados, recontatos: rec.enviados });
+    res.json({ ok: true, reeng4meses: r4m.enviados, reeng5dias: r5d.enviados, recontatos: rec.enviados, checkins: chk.enviados });
   } catch (err) {
     console.error('[Cron Reengagement]', err.message);
     res.status(500).json({ error: err.message });
@@ -781,16 +782,17 @@ app.get('/api/cron/followup-vercel', async (req, res) => {
 
 app.get('/api/cron/reengagement-vercel', async (req, res) => {
   const { executarReengajamento4Meses, executarReengajamento5Dias } = require('./plugins/reengagement');
-  const { executarRecontatosProgramados } = require('./plugins/recontato');
+  const { executarRecontatosProgramados, executarCheckins } = require('./plugins/recontato');
   const db = getPrisma();
   try {
-    const [r4m, r5d, rec] = await Promise.all([
+    const [r4m, r5d, rec, chk] = await Promise.all([
       executarReengajamento4Meses(db),
       executarReengajamento5Dias(db),
-      executarRecontatosProgramados(db)
+      executarRecontatosProgramados(db),
+      executarCheckins(db)
     ]);
-    console.log(`[Vercel Cron] Reeng: 4m=${r4m.enviados}, 5d=${r5d.enviados}, recontatos=${rec.enviados}`);
-    res.json({ ok: true, reeng4meses: r4m.enviados, reeng5dias: r5d.enviados, recontatos: rec.enviados });
+    console.log(`[Vercel Cron] Reeng: 4m=${r4m.enviados}, 5d=${r5d.enviados}, recontatos=${rec.enviados}, checkins=${chk.enviados}`);
+    res.json({ ok: true, reeng4meses: r4m.enviados, reeng5dias: r5d.enviados, recontatos: rec.enviados, checkins: chk.enviados });
   } catch (err) {
     console.error('[Vercel Cron Reengagement]', err.message);
     res.status(500).json({ error: err.message });
